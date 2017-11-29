@@ -66,7 +66,7 @@ class RepositoryTest : RepositoryTestBase() {
         val repoAccessors = storage.getChunkStorage().prepareAccessors()
         val objectIndex = ObjectIndex.create(repoConfig, objectIndexCC)
 
-        var repository = Repository.create(branch, objectIndex, branchLog, repoAccessors, simpleCommitCallback,
+        var repository = Repository.create(branch, objectIndex, branchLog, repoAccessors, branchLogIO!!,
                 RepositoryConfig())
 
         repository.putBytes("test", "test".toUTF())
@@ -75,7 +75,7 @@ class RepositoryTest : RepositoryTestBase() {
 
         assertTrue(repository.readBytes("test") contentEquals "test".toUTF())
 
-        repository = Repository.open(branch, branchLog, repoAccessors, simpleCommitCallback)
+        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
         assertTrue(repository.readBytes("test") contentEquals "test".toUTF())
     }
 
@@ -91,7 +91,7 @@ class RepositoryTest : RepositoryTestBase() {
         val objectIndexCC = createChunkContainer(storage, repoConfig)
         val repoAccessors = storage.getChunkStorage().prepareAccessors()
         val objectIndex = ObjectIndex.create(repoConfig, objectIndexCC)
-        var repository = Repository.create(branch, objectIndex, branchLog, repoAccessors, simpleCommitCallback,
+        var repository = Repository.create(branch, objectIndex, branchLog, repoAccessors, branchLogIO!!,
                 repoConfig)
 
         val content = HashMap<String, DatabaseStringEntry>()
@@ -104,16 +104,16 @@ class RepositoryTest : RepositoryTestBase() {
 
         repository.commit(ByteArray(0), simpleCommitSignature)
         containsContent(repository, content)
-        val tip = repository.getTip()
+        val tip = repository.getHead()
         assertEquals(tip, repository.getHeadCommit()!!.getRef().hash)
 
-        repository = Repository.open(branch, branchLog, repoAccessors, simpleCommitCallback)
+        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
         containsContent(repository, content)
 
         // test add to existing dir
         add(repository, content, DatabaseStringEntry("dir1/file6", "file6"))
         repository.commit(ByteArray(0), simpleCommitSignature)
-        repository = Repository.open(branch, branchLog, repoAccessors, simpleCommitCallback)
+        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
         containsContent(repository, content)
 
         // test update
@@ -121,13 +121,13 @@ class RepositoryTest : RepositoryTestBase() {
         add(repository, content, DatabaseStringEntry("dir1/sub1/file5", "file5Update"))
         add(repository, content, DatabaseStringEntry("dir1/sub1/sub2/file6", "file6Update"))
         repository.commit(ByteArray(0), simpleCommitSignature)
-        repository = Repository.open(branch, branchLog, repoAccessors, simpleCommitCallback)
+        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
         containsContent(repository, content)
 
         // test remove
         remove(repository, content, "dir1/sub1/file5")
         repository.commit(ByteArray(0), simpleCommitSignature)
-        repository = Repository.open(branch, branchLog, repoAccessors, simpleCommitCallback)
+        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
         containsContent(repository, content)
 
         assertEquals(0, repository.listFiles("notThere").size)

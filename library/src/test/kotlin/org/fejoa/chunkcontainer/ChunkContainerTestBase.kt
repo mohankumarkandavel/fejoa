@@ -18,12 +18,12 @@ import kotlin.test.AfterTest
 
 open class ChunkContainerTestBase {
     protected val cleanUpList: MutableList<TestStorage> = ArrayList()
-    private var settings = CryptoSettings.default
-    private var cryptoInterface: CryptoInterface = platformCrypto()
-    private var secretKey: SecretKey? = null
+    protected var settings = CryptoSettings.default
+    protected var cryptoInterface: CryptoInterface = platformCrypto()
+    protected var secretKey: SecretKey? = null
 
     @BeforeTest
-    fun setUp() = runBlocking {
+    open fun setUp() = runBlocking {
         secretKey = cryptoInterface.generateSymmetricKey(settings.symmetric).await()
     }
 

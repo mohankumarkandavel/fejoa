@@ -12,7 +12,7 @@ interface Database : IODatabase {
 
     fun getBranch(): String
 
-    suspend fun getTip(): Hash
+    suspend fun getHead(): Hash
     suspend fun commit(message: ByteArray, signature: CommitSignature?): Hash
     /**
      * Merges one or more databases into our database.

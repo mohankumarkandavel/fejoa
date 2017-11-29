@@ -1,19 +1,32 @@
 package org.fejoa.repository
 
+import kotlinx.coroutines.experimental.runBlocking
 import org.fejoa.chunkcontainer.*
 import org.fejoa.storage.KeepOursUnchanged
 import org.fejoa.support.PathUtils
+import org.fejoa.support.await
 import org.fejoa.support.toUTF
 import org.fejoa.support.toUTFString
+import kotlin.test.BeforeTest
 
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
 
 open class RepositoryTestBase : ChunkContainerTestBase() {
-    protected val simpleCommitCallback = RepositoryBuilder.getSimpleCommitCallback()
+    protected var branchLogIO: BranchLogIO? = null
 
     protected class DatabaseStringEntry(var path: String, var content: String)
+
+    @BeforeTest
+    override fun setUp() {
+        super.setUp()
+
+        runBlocking {
+            //branchLogIO = RepositoryBuilder.getPlainBranchLogIO()
+            branchLogIO = RepositoryBuilder.getEncryptedBranchLogIO(cryptoInterface, secretKey!!, settings.symmetric)
+        }
+    }
 
     protected suspend fun add(database: Repository, content: MutableMap<String, DatabaseStringEntry>, entry: DatabaseStringEntry) {
         content.put(entry.path, entry)
@@ -57,7 +70,7 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
         val objectIndexCC = createChunkContainer(storage, repoConfig)
         val repoAccessors = storage.getChunkStorage().prepareAccessors()
         val objectIndex = ObjectIndex.create(repoConfig, objectIndexCC)
-        return Repository.create(branch, objectIndex, branchLog, repoAccessors, simpleCommitCallback, repoConfig)
+        return Repository.create(branch, objectIndex, branchLog, repoAccessors, branchLogIO!!, repoConfig)
     }
 
     internal class TestBlob(val content: String)
@@ -87,7 +100,7 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
 
         suspend fun clone(): TestRepository {
             val clone = TestRepository(Repository.open(repository.getBranch(), repository.log, repository.accessors,
-                    repository.commitCallback), head)
+                    repository.getHead(), repository.branchLogIO), head)
             clone.head?.let {
                 clone.repository.setHeadCommit(it.hash)
             }

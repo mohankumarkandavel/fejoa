@@ -36,7 +36,8 @@ class GarbageCollectionTest : RepositoryTestBase() {
         target.getCurrentTransaction().finishTransaction()
         target.log.add(repository.log.getHead().await()!!)
         // re-open to use the correct object index
-        target = Repository.open(target.getBranch(), target.log, target.accessors, target.commitCallback)
+        target = Repository.open(target.getBranch(), target.log, target.accessors, repository.getHead(),
+                target.branchLogIO)
         testRepo.verify(target)
     }
 }

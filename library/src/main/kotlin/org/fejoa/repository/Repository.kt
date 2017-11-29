@@ -5,12 +5,11 @@ import org.fejoa.crypto.CryptoInterface
 import org.fejoa.crypto.CryptoSettings
 import org.fejoa.crypto.SecretKey
 import org.fejoa.storage.*
-import org.fejoa.support.IOException
-import org.fejoa.support.await
-import org.fejoa.support.getAll
+import org.fejoa.support.*
 
 
 class CryptoConfig(val crypto: CryptoInterface, val secretKey: SecretKey, val symmetric: CryptoSettings.Symmetric)
+
 
 /**
  * @param ioFilters indicates which operations should be applied for serialization. The order and number of the list items
@@ -29,9 +28,25 @@ class RepositoryConfig(val crypto: CryptoConfig? = null,
 }
 
 
+class RepositoryRef(val objectIndexRef: ChunkContainerRef, val head: Hash) {
+    companion object {
+        suspend fun read(inStream: AsyncInStream): RepositoryRef {
+            val objectIndexRef = ChunkContainerRef.read(inStream)
+            val head = Hash.read(inStream)
+            return RepositoryRef(objectIndexRef, head)
+        }
+    }
+
+    suspend fun write(outStream: AsyncOutStream) {
+        objectIndexRef.write(outStream)
+        head.write(outStream)
+    }
+}
+
+
 class Repository private constructor(private val branch: String, val objectIndex: ObjectIndex, val log: BranchLog,
                                      val accessors: ChunkAccessors,
-                                     val commitCallback: CommitCallback,
+                                     val branchLogIO: BranchLogIO,
                                      val config: RepositoryConfig): Database {
     private var headCommit: Commit? = null
     private var transaction: LogRepoTransaction = LogRepoTransaction(accessors.startTransaction())
@@ -42,28 +57,24 @@ class Repository private constructor(private val branch: String, val objectIndex
 
     companion object {
         fun create(branch: String, objectIndex: ObjectIndex, log: BranchLog, accessors: ChunkAccessors,
-                   commitCallback: CommitCallback, config: RepositoryConfig): Repository {
-            return Repository(branch, objectIndex, log, accessors, commitCallback, config)
+                   branchLogIO: BranchLogIO, config: RepositoryConfig): Repository {
+            return Repository(branch, objectIndex, log, accessors, branchLogIO, config)
         }
 
-        suspend fun open(branch: String, log: BranchLog, accessors: ChunkAccessors,
-                         commitCallback: CommitCallback, config: RepositoryConfig = RepositoryConfig()): Repository {
+        suspend fun open(branch: String, log: BranchLog, accessors: ChunkAccessors, head: Hash,
+                         branchLogIO: BranchLogIO, config: RepositoryConfig = RepositoryConfig()): Repository {
 
-            val objectIndexRef = log.getHead().await()?.let {
-                commitCallback.objectIndexRefFromLog(it.message)
+            val repoRef = log.getHead().await()?.let {
+                branchLogIO.readFromLog(it.message)
             } ?: throw IOException("Can't read object index head")
 
             val transaction = accessors.startTransaction()
-            val accessor = transaction.getCommitAccessor(objectIndexRef.containerSpec)
+            val accessor = transaction.getCommitAccessor(repoRef.objectIndexRef.containerSpec)
             val objectIndex = ObjectIndex.open(config,
-                    ChunkContainer.read(accessor, objectIndexRef))
+                    ChunkContainer.read(accessor, repoRef.objectIndexRef))
 
-            val commitHash = objectIndex.getCommitEntries().firstOrNull()
-                    ?: throw Exception("No commits in object index")
-            val repository = Repository(branch, objectIndex, log, accessors, commitCallback, config)
-            if (commitHash != null && !commitHash.value.isZero)
-                repository.setHeadCommit(commitHash)
-
+            val repository = Repository(branch, objectIndex, log, accessors, branchLogIO, config)
+            repository.setHeadCommit(head)
             return repository
         }
     }
@@ -92,7 +103,7 @@ class Repository private constructor(private val branch: String, val objectIndex
         ioDatabase.setRootDirectory(rootDir)
     }
 
-    override suspend fun getTip(): Hash {
+    override suspend fun getHead(): Hash {
         return getHeadCommit()?.getRef()?.hash?.clone() ?: Hash()
     }
 
@@ -109,7 +120,7 @@ class Repository private constructor(private val branch: String, val objectIndex
             if (singleResult == Database.MergeResult.MERGED)
                 result = singleResult
         }
-        this.mergeParents.addAll(mergeParents.map { it.getTip() })
+        this.mergeParents.addAll(mergeParents.map { it.getHead() })
         return result
     }
 
@@ -135,7 +146,7 @@ class Repository private constructor(private val branch: String, val objectIndex
             if (theirs.headCommit == null)
                 return Database.MergeResult.FAST_FORWARD
 
-            if (!oursIsModified && getTip() == theirs.getTip())
+            if (!oursIsModified && getHead() == theirs.getHead())
                 return Database.MergeResult.FAST_FORWARD
         }
 
@@ -147,7 +158,7 @@ class Repository private constructor(private val branch: String, val objectIndex
         if (allowFastForward && !oursIsModified && !theirsIsModified) {
             if (headCommit == null) {
                 // we are empty; just use the other branch's head
-                setHeadCommit(theirs.getTip())
+                setHeadCommit(theirs.getHead())
                 return Database.MergeResult.FAST_FORWARD
             }
 
@@ -160,7 +171,7 @@ class Repository private constructor(private val branch: String, val objectIndex
                     ?: throw IOException("Branches don't have common ancestor.")
             if (shortestChain.oldest.getHash() == headCommit!!.getHash()) {
                 // no local commits: just use the remote head
-                setHeadCommit(theirs.getTip())
+                setHeadCommit(theirs.getHead())
                 return Database.MergeResult.FAST_FORWARD
             }
         }
@@ -243,11 +254,10 @@ class Repository private constructor(private val branch: String, val objectIndex
         writeCommit(commit)
         headCommit = commit
 
-        val objectIndexHead =  objectIndex.flush()
-
+        val objectIndexRef =  objectIndex.flush()
+        val repoRef = RepositoryRef(objectIndexRef, commit.getRef().hash)
         transaction.finishTransaction()
-        log.add(commitCallback.logHash(objectIndexHead), commitCallback.objectIndexRefToLog(objectIndexHead),
-                transaction.getObjectsWritten())
+        log.add(branchLogIO.logHash(repoRef), branchLogIO.writeToLog(repoRef), transaction.getObjectsWritten())
         transaction = LogRepoTransaction(accessors.startTransaction())
         ioDatabase.setTransaction(transaction)
 
