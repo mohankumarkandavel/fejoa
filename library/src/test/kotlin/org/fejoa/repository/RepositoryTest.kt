@@ -30,8 +30,7 @@ class RepositoryTest : RepositoryTestBase() {
         val dirName = "testEncryptedDir"
         val branch = "testEnc"
 
-        val storage = platformCreateTestStorage(dirName, branch)
-        cleanUpList.add(storage)
+        val storage = prepareStorage(dirName, branch)
         val crypto = platformCrypto()
         val settings = CryptoSettings.default
         val secretKey = crypto.generateSymmetricKey(settings.symmetric).await()
@@ -56,8 +55,7 @@ class RepositoryTest : RepositoryTestBase() {
         val dirName = "testBasics"
         val branch = "basicBranch"
 
-        val storage = platformCreateTestStorage(dirName, branch)
-        cleanUpList.add(storage)
+        val storage = prepareStorage(dirName, branch)
         val branchLog = storage.getBranchLog()
 
         val repoConfig = RepositoryConfig()
@@ -83,8 +81,7 @@ class RepositoryTest : RepositoryTestBase() {
     fun testRepositoryBasics() = runBlocking {
         val dirName = "testRepositoryBasicsDir"
         val branch = "basicBranch"
-        val storage = platformCreateTestStorage(dirName, branch)
-        cleanUpList.add(storage)
+        val storage = prepareStorage(dirName, branch)
         val branchLog = storage.getBranchLog()
         val repoConfig = RepositoryConfig()
         repoConfig.hashSpec.setFixedSizeChunking(500)

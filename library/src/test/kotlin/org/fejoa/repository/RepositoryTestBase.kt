@@ -3,8 +3,8 @@ package org.fejoa.repository
 import kotlinx.coroutines.experimental.runBlocking
 import org.fejoa.chunkcontainer.*
 import org.fejoa.storage.KeepOursUnchanged
+import org.fejoa.storage.StorageBackend
 import org.fejoa.support.PathUtils
-import org.fejoa.support.await
 import org.fejoa.support.toUTF
 import org.fejoa.support.toUTFString
 import kotlin.test.BeforeTest
@@ -56,10 +56,11 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
         assertEquals(content.size, countFiles(database, ""))
     }
 
-    suspend protected fun createChunkContainer(storage: TestStorage, repositoryConfig: RepositoryConfig)
+    suspend protected fun createChunkContainer(storage: StorageBackend.BranchBackend,
+                                               repositoryConfig: RepositoryConfig)
             : ChunkContainer {
-        return prepareContainer(storage,
-                ContainerSpec(repositoryConfig.hashSpec.clone(), repositoryConfig.boxSpec.clone()))
+        return prepareContainer(storage, ContainerSpec(repositoryConfig.hashSpec.clone(),
+                repositoryConfig.boxSpec.clone()))
     }
 
     suspend protected fun createRepo(dirName: String, branch: String): Repository {
