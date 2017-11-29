@@ -1,0 +1,22 @@
+group 'chunkstore'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+apply plugin: 'kotlinx-serialization'
+
+repositories {
+    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
+    maven { url "https://kotlin.bintray.com/kotlinx" }
+    mavenCentral()
+}
+
+dependencies {
+    compile project(":commonJVM")
+
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+    testCompile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version"
+}

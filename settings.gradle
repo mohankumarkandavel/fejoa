@@ -1,0 +1,13 @@
+rootProject.name = 'LoginChrome'
+
+include ":chunkstoreJVM"
+include ":common"
+include ":commonJS"
+include ":commonJVM"
+include ":jsbindings"
+include ":library"
+include ":libraryJS"
+include ":libraryJVM"
+include ":rabin"
+include ":rabinJVM"
+include ":rabinJS"

@@ -1,0 +1,30 @@
+# build files
+**/out/**
+gen/**
+target/**
+build/**
+libs/**
+*/node_modules/*
+
+# other files
+**/.chunkstore/**
+*/target/*
+*.idx
+*.pack
+proguard-project.txt
+
+# IDEA project files
+.idea/**
+workspace.xml
+build.xml
+local.properties
+Project_Default.xml
+profiles_settings.xml
+
+# dolphin (KDE file manager)
+.directory
+
+# Gradle
+.gradle
+*/build/
+gradle-wrapper.jar

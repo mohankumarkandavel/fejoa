@@ -1,0 +1,37 @@
+group 'javacompat'
+version '1.0-SNAPSHOT'
+
+//apply plugin: 'org.jetbrains.kotlin.frontend'
+apply plugin: 'kotlin-platform-js'
+
+
+// configure kotlin compiler
+compileKotlin2Js {
+    kotlinOptions.metaInfo = true
+    kotlinOptions.outputFile = "$project.buildDir.path/js/${project.name}.js"
+    kotlinOptions.sourceMap = true
+    kotlinOptions.moduleKind = 'umd'
+    kotlinOptions.main = "call"
+}
+
+compileTestKotlin2Js {
+    kotlinOptions.metaInfo = true
+    kotlinOptions.outputFile = "$project.buildDir.path/js-tests/${project.name}-tests.js"
+    kotlinOptions.sourceMap = true
+    kotlinOptions.moduleKind = 'umd'
+    kotlinOptions.main = "call"
+}
+
+kotlin {
+    experimental {
+        coroutines "enable"
+    }
+}
+repositories {
+    mavenCentral()
+}
+dependencies {
+    compile project(":jsbindings")
+    compile "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
+    expectedBy project(':common')
+}

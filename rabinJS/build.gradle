@@ -1,0 +1,93 @@
+apply plugin: 'kotlin-platform-js'
+
+repositories {
+    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
+    mavenCentral()
+}
+
+dependencies {
+    compile project(":jsbindings")
+    compile project(':commonJS')
+    expectedBy project(":rabin")
+    compile "org.jetbrains.kotlin:kotlin-stdlib-js"
+    testCompile "org.jetbrains.kotlin:kotlin-test-js"
+}
+
+buildscript {
+    repositories {
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath "gradle.plugin.com.craigburke.gradle:karma-gradle:1.4.4"
+    }
+}
+
+apply plugin: 'com.craigburke.karma'
+
+
+compileKotlin2Js {
+    kotlinOptions.metaInfo = true
+    kotlinOptions.sourceMap = true
+    kotlinOptions.moduleKind = 'umd'
+    kotlinOptions.main = "call"
+    kotlinOptions.sourceMapEmbedSources = "always"
+}
+
+compileTestKotlin2Js {
+    kotlinOptions.metaInfo = true
+    kotlinOptions.sourceMap = true
+    kotlinOptions.moduleKind = 'umd'
+    kotlinOptions.main = "call"
+    kotlinOptions.sourceMapEmbedSources = "always"
+}
+
+def libDir = "$buildDir/lib"
+def compileOutput = compileKotlin2Js.outputFile
+def testOutput = compileTestKotlin2Js.outputFile
+
+task populateNodeModules(type: Copy, dependsOn: compileKotlin2Js) {
+    configurations.testCompile.each {
+        from zipTree(it.absolutePath).matching { include '*.js' }
+    }
+
+    into libDir
+}
+
+def timeout = 2 * 60 * 1000
+
+karma {
+    dependencies(['mocha'])
+
+    //frameworks = ['mocha']
+    frameworks = ['jasmine']
+    browsers = ['PhantomJS']
+    //logLevel = "config.LOG_DEBUG"
+    browserDisconnectTimeout = timeout
+    processKillTimeout = timeout
+    browserNoActivityTimeout = timeout
+
+    profile('default')  {
+        libraryBases = ['${projectDir}/build/lib/']
+        libraryFiles = ['BigInteger.min.js']
+    }
+
+    files = [
+            "${projectDir}/../jsbindings/build/resources/main/libs/BigInteger.min.js",
+            "$libDir/kotlin.js",
+            "$libDir/jsbindings.js",
+            "$libDir/common.js",
+            "$libDir/*.js",
+            compileOutput,
+            testOutput
+            //"${projectDir}/build/classes/test/rabinTest_test.js.map"
+    ]
+}
+
+karmaRun {
+    dependsOn compileTestKotlin2Js
+    dependsOn populateNodeModules
+}
+
+test.dependsOn karmaRun
+clean.dependsOn karmaClean
+

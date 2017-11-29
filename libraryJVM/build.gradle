@@ -1,0 +1,21 @@
+apply plugin: 'kotlin-platform-jvm'
+apply plugin: 'kotlinx-serialization'
+
+repositories {
+    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
+    maven { url "https://kotlin.bintray.com/kotlinx" }
+    mavenCentral()
+}
+
+dependencies {
+    compile project(":chunkstoreJVM")
+    compile project(":commonJVM")
+    compile project(":rabinJVM")
+    expectedBy project(":library")
+    testCompile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile group: 'org.bouncycastle', name: 'bcpg-jdk15on', version: '1.55'
+
+    compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version"
+    testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
+}
