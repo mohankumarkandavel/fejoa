@@ -53,14 +53,18 @@ open class ChunkContainerTestBase {
                 .encrypted(cryptoInterface, secretKey!!, settings.symmetric).compressed()
     }
 
-    protected fun ChunkStorage.prepareAccessors(): ChunkAccessors {
+    protected fun getRepoConfig(): RepositoryConfig {
         val boxSpec = BoxSpec(
                 encInfo = BoxSpec.EncryptionInfo(BoxSpec.EncryptionInfo.Type.PARENT),
                 zipType = BoxSpec.ZipType.DEFLATE,
                 zipBeforeEnc = true
         )
-        return RepoChunkAccessors(this, RepositoryConfig(boxSpec = boxSpec,
-                crypto = CryptoConfig(cryptoInterface, secretKey!!, settings.symmetric)))
+
+        return RepositoryConfig(boxSpec = boxSpec, crypto = CryptoConfig(secretKey!!, settings.symmetric))
+    }
+
+    protected fun ChunkStorage.prepareAccessors(): ChunkAccessors {
+        return RepoChunkAccessors(this, getRepoConfig())
     }
 
     suspend protected fun prepareContainer(storage: StorageBackend.BranchBackend, config: ContainerSpec)

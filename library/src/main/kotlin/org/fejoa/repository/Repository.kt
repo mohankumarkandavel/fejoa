@@ -1,21 +1,15 @@
 package org.fejoa.repository
 
 import org.fejoa.chunkcontainer.*
-import org.fejoa.crypto.CryptoInterface
 import org.fejoa.crypto.CryptoSettings
 import org.fejoa.crypto.SecretKey
 import org.fejoa.storage.*
 import org.fejoa.support.*
 
 
-class CryptoConfig(val crypto: CryptoInterface, val secretKey: SecretKey, val symmetric: CryptoSettings.Symmetric)
+class CryptoConfig(val secretKey: SecretKey, val symmetric: CryptoSettings.Symmetric)
 
-
-/**
- * @param ioFilters indicates which operations should be applied for serialization. The order and number of the list items
- * matters, e.g. listOf(IOFilter.COMPRESSED, IOFilter.ENCRYPTED) means that when writing a chunk, the chunk is first
- * compressed and then encrypted.
- */
+// TODO remove crypto config?
 class RepositoryConfig(val crypto: CryptoConfig? = null,
                        val hashSpec: HashSpec = HashSpec(),
                        val boxSpec: BoxSpec = BoxSpec(),
@@ -28,6 +22,7 @@ class RepositoryConfig(val crypto: CryptoConfig? = null,
 }
 
 
+// TODO: include revlog settings?
 class RepositoryRef(val objectIndexRef: ChunkContainerRef, val head: Hash) {
     companion object {
         suspend fun read(inStream: AsyncInStream): RepositoryRef {
@@ -44,37 +39,48 @@ class RepositoryRef(val objectIndexRef: ChunkContainerRef, val head: Hash) {
 }
 
 
-class Repository private constructor(private val branch: String, val objectIndex: ObjectIndex, val log: BranchLog,
-                                     val accessors: ChunkAccessors,
+class Repository private constructor(private val branch: String,
+                                     val branchBackend: StorageBackend.BranchBackend,
+                                     private val accessors: ChunkAccessors,
+                                     transaction: ChunkAccessors.Transaction,
+                                     val log: BranchLog,
+                                     val objectIndex: ObjectIndex,
                                      val branchLogIO: BranchLogIO,
                                      val config: RepositoryConfig): Database {
+    private var transaction: LogRepoTransaction = LogRepoTransaction(transaction)
     private var headCommit: Commit? = null
-    private var transaction: LogRepoTransaction = LogRepoTransaction(accessors.startTransaction())
     val commitCache = CommitCache(this)
-    val ioDatabase: IODatabaseCC = IODatabaseCC(Directory(""), objectIndex, transaction,
-            ContainerSpec(config.hashSpec, config.boxSpec))
+    val ioDatabase = IODatabaseCC(Directory(""), objectIndex, transaction, config.containerSpec)
     private val mergeParents = ArrayList<Hash>()
 
     companion object {
-        fun create(branch: String, objectIndex: ObjectIndex, log: BranchLog, accessors: ChunkAccessors,
-                   branchLogIO: BranchLogIO, config: RepositoryConfig): Repository {
-            return Repository(branch, objectIndex, log, accessors, branchLogIO, config)
+        fun create(branch: String, branchBackend: StorageBackend.BranchBackend, branchLogIO: BranchLogIO,
+                   config: RepositoryConfig): Repository {
+            val containerSpec = config.containerSpec
+            val accessors: ChunkAccessors = RepoChunkAccessors(branchBackend.getChunkStorage(), config)
+            val log: BranchLog = branchBackend.getBranchLog()
+            val transaction = accessors.startTransaction()
+            val objectIndexCC = ChunkContainer.create(transaction.getObjectIndexAccessor(containerSpec),
+                    containerSpec)
+            val objectIndex = ObjectIndex.create(config, objectIndexCC)
+            return Repository(branch, branchBackend, accessors, transaction, log, objectIndex, branchLogIO, config)
         }
 
-        suspend fun open(branch: String, log: BranchLog, accessors: ChunkAccessors, head: Hash,
-                         branchLogIO: BranchLogIO, config: RepositoryConfig = RepositoryConfig()): Repository {
+        suspend fun open(branch: String, ref: RepositoryRef, branchBackend: StorageBackend.BranchBackend,
+                         branchLogIO: BranchLogIO, crypto: CryptoConfig?): Repository {
+            val repoConfig = RepositoryConfig(crypto, ref.objectIndexRef.hash.spec, ref.objectIndexRef.boxSpec)
 
-            val repoRef = log.getHead().await()?.let {
-                branchLogIO.readFromLog(it.message)
-            } ?: throw IOException("Can't read object index head")
-
+            val containerSpec = repoConfig.containerSpec
+            val accessors: ChunkAccessors = RepoChunkAccessors(branchBackend.getChunkStorage(), repoConfig)
+            val log: BranchLog = branchBackend.getBranchLog()
             val transaction = accessors.startTransaction()
-            val accessor = transaction.getCommitAccessor(repoRef.objectIndexRef.containerSpec)
-            val objectIndex = ObjectIndex.open(config,
-                    ChunkContainer.read(accessor, repoRef.objectIndexRef))
+            val objectIndexCC = ChunkContainer.read(transaction.getObjectIndexAccessor(containerSpec),
+                    ref.objectIndexRef)
+            val objectIndex = ObjectIndex.open(repoConfig, objectIndexCC)
 
-            val repository = Repository(branch, objectIndex, log, accessors, branchLogIO, config)
-            repository.setHeadCommit(head)
+            val repository = Repository(branch, branchBackend, accessors, transaction, log, objectIndex, branchLogIO,
+                    repoConfig)
+            repository.setHeadCommit(ref.head)
             return repository
         }
     }
@@ -262,6 +268,10 @@ class Repository private constructor(private val branch: String, val objectIndex
         ioDatabase.setTransaction(transaction)
 
         return commit.getRef().hash
+    }
+
+    suspend fun getRepositoryRef(): RepositoryRef {
+        return RepositoryRef(objectIndex.chunkContainer.ref, getHead())
     }
 
     suspend private fun writeTree(tree: Directory): Hash {

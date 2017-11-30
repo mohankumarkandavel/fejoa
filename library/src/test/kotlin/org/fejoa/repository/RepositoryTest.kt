@@ -56,16 +56,10 @@ class RepositoryTest : RepositoryTestBase() {
         val branch = "basicBranch"
 
         val storage = prepareStorage(dirName, branch)
-        val branchLog = storage.getBranchLog()
-
-        val repoConfig = RepositoryConfig()
+        val repoConfig = getRepoConfig()
         repoConfig.hashSpec.setFixedSizeChunking(500)
-        val objectIndexCC = createChunkContainer(storage, repoConfig)
-        val repoAccessors = storage.getChunkStorage().prepareAccessors()
-        val objectIndex = ObjectIndex.create(repoConfig, objectIndexCC)
 
-        var repository = Repository.create(branch, objectIndex, branchLog, repoAccessors, branchLogIO!!,
-                RepositoryConfig())
+        var repository = Repository.create(branch, storage, branchLogIO!!, repoConfig)
 
         repository.putBytes("test", "test".toUTF())
         assertTrue(repository.readBytes("test") contentEquals "test".toUTF())
@@ -73,7 +67,7 @@ class RepositoryTest : RepositoryTestBase() {
 
         assertTrue(repository.readBytes("test") contentEquals "test".toUTF())
 
-        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, branchLogIO!!, repoConfig.crypto)
         assertTrue(repository.readBytes("test") contentEquals "test".toUTF())
     }
 
@@ -82,14 +76,9 @@ class RepositoryTest : RepositoryTestBase() {
         val dirName = "testRepositoryBasicsDir"
         val branch = "basicBranch"
         val storage = prepareStorage(dirName, branch)
-        val branchLog = storage.getBranchLog()
-        val repoConfig = RepositoryConfig()
+        val repoConfig = getRepoConfig()
         repoConfig.hashSpec.setFixedSizeChunking(500)
-        val objectIndexCC = createChunkContainer(storage, repoConfig)
-        val repoAccessors = storage.getChunkStorage().prepareAccessors()
-        val objectIndex = ObjectIndex.create(repoConfig, objectIndexCC)
-        var repository = Repository.create(branch, objectIndex, branchLog, repoAccessors, branchLogIO!!,
-                repoConfig)
+        var repository = Repository.create(branch, storage,branchLogIO!!, repoConfig)
 
         val content = HashMap<String, DatabaseStringEntry>()
         add(repository, content, DatabaseStringEntry("file1", "file1"))
@@ -104,13 +93,13 @@ class RepositoryTest : RepositoryTestBase() {
         val tip = repository.getHead()
         assertEquals(tip, repository.getHeadCommit()!!.getRef().hash)
 
-        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, branchLogIO!!, repoConfig.crypto)
         containsContent(repository, content)
 
         // test add to existing dir
         add(repository, content, DatabaseStringEntry("dir1/file6", "file6"))
         repository.commit(ByteArray(0), simpleCommitSignature)
-        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, branchLogIO!!, repoConfig.crypto)
         containsContent(repository, content)
 
         // test update
@@ -118,13 +107,13 @@ class RepositoryTest : RepositoryTestBase() {
         add(repository, content, DatabaseStringEntry("dir1/sub1/file5", "file5Update"))
         add(repository, content, DatabaseStringEntry("dir1/sub1/sub2/file6", "file6Update"))
         repository.commit(ByteArray(0), simpleCommitSignature)
-        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, branchLogIO!!, repoConfig.crypto)
         containsContent(repository, content)
 
         // test remove
         remove(repository, content, "dir1/sub1/file5")
         repository.commit(ByteArray(0), simpleCommitSignature)
-        repository = Repository.open(branch, branchLog, repoAccessors, repository.getHead(), branchLogIO!!)
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, branchLogIO!!, repoConfig.crypto)
         containsContent(repository, content)
 
         assertEquals(0, repository.listFiles("notThere").size)

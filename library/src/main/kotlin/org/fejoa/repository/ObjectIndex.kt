@@ -360,7 +360,7 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
 
             val versionValue = inputStream.read()
             val version = Version.values().firstOrNull { it.value == versionValue }
-                    ?: throw IOException("Unknown version")
+                    ?: throw IOException("Unknown version $versionValue")
             val parent = ChunkContainerRef.read(inputStream)
             val recentEntries = ObjectIndexEntryList.read(chunkContainer, inputStream.position())
             inputStream.close()

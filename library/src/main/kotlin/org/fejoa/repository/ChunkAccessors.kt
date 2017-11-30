@@ -3,12 +3,13 @@ package org.fejoa.repository
 import org.fejoa.chunkcontainer.BoxSpec
 import org.fejoa.chunkcontainer.ChunkContainerRef
 import org.fejoa.chunkcontainer.ContainerSpec
+import org.fejoa.crypto.CryptoHelper
 import org.fejoa.storage.*
 import org.fejoa.support.Future
 
 
 interface ChunkAccessors {
-    interface Transaction : StorageTransaction{
+    interface Transaction : StorageTransaction {
         /**
          * Accessor to raw data chunks.
          *
@@ -19,7 +20,16 @@ interface ChunkAccessors {
         /**
          * Accessor to access commit chunks.
          */
-        fun getCommitAccessor(spec: ContainerSpec): ChunkAccessor
+        fun getObjectIndexAccessor(spec: ContainerSpec): ChunkAccessor {
+            return getTreeAccessor(spec)
+        }
+
+        /**
+         * Accessor to access commit chunks.
+         */
+        fun getCommitAccessor(spec: ContainerSpec): ChunkAccessor {
+            return getTreeAccessor(spec)
+        }
 
         /**
          * Accessor to access the directory structure chunks.
@@ -47,8 +57,8 @@ class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryCo
                 return when (repoConfig.boxSpec.encInfo.type) {
                     BoxSpec.EncryptionInfo.Type.PLAIN -> accessor
                     BoxSpec.EncryptionInfo.Type.PARENT -> {
-                        val crypto = repoConfig.crypto ?: throw Exception("Missing crypto data")
-                        accessor.encrypted(crypto.crypto, crypto.secretKey, crypto.symmetric)
+                        val cryptoConfig = repoConfig.crypto ?: throw Exception("Missing crypto data")
+                        accessor.encrypted(CryptoHelper.crypo, cryptoConfig.secretKey, cryptoConfig.symmetric)
                     }
                 }
             }
@@ -75,10 +85,6 @@ class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryCo
 
             override fun getRawAccessor(): ChunkTransaction {
                 return chunkStorageTransaction
-            }
-
-            override fun getCommitAccessor(spec: ContainerSpec): ChunkAccessor {
-                return prepareAccessor()
             }
 
             override fun getTreeAccessor(spec: ContainerSpec): ChunkAccessor {

@@ -1,6 +1,5 @@
 package org.fejoa.repository
 
-import org.fejoa.chunkcontainer.ChunkContainerRef
 import org.fejoa.chunkcontainer.ContainerSpec
 import org.fejoa.storage.*
 import org.fejoa.support.Future
@@ -12,6 +11,10 @@ class LogRepoTransaction(private val childTransaction: ChunkAccessors.Transactio
 
     override fun getRawAccessor(): ChunkTransaction {
         return createWrapper(childTransaction.getRawAccessor())
+    }
+
+    override fun getObjectIndexAccessor(spec: ContainerSpec): ChunkAccessor {
+        return createWrapper(childTransaction.getObjectIndexAccessor(spec))
     }
 
     override fun getCommitAccessor(spec: ContainerSpec): ChunkAccessor {
