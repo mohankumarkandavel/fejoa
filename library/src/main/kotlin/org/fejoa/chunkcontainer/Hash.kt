@@ -8,7 +8,6 @@ import org.fejoa.crypto.CryptoHelper
 import org.fejoa.crypto.HashOutStreamFactory
 import org.fejoa.crypto.SHA256Factory
 import org.fejoa.storage.*
-import org.fejoa.protocolbufferlight.ProtocolBufferLight
 import org.fejoa.support.*
 
 
@@ -95,16 +94,6 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
             return HashSpec(getChunkingConfig(type, extra))
         }
 
-        internal enum class RabinDetailTag(val value: Int) {
-            TARGET_CHUNK_SIZE(0),
-            MIN_CHUNK_SIZE(1),
-            MAX_CHUNK_SIZE(2)
-        }
-
-        internal enum class FixedSizeDetailTag(val value: Int) {
-            SIZE(0)
-        }
-
         private fun getDefaultChunkingConfig(type: HashType): ChunkingConfig {
             return when (type) {
                 SHA_256 -> NonChunkingConfig(SHA_256)
@@ -120,46 +109,12 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
             val custom = type.value and CUSTOM_HASH_MASK != 0
             return when (type) {
                 SHA_256 -> NonChunkingConfig(SHA_256)
-                FEJOA_FIXED_8K,
-                FEJOA_FIXED_CUSTOM -> {
-                    val default = FixedSizeChunkingConfig.create(type)
-                    if (custom)
-                        readDetails(default, extra)
-                    return default
-                }
+                FEJOA_FIXED_CUSTOM,
+                FEJOA_FIXED_8K -> FixedSizeChunkingConfig.read(type, custom, extra)
                 FEJOA_RABIN_CUSTOM,
                 FEJOA_RABIN_2KB_8KB,
-                FEJOA_RABIN_2KB_8KB_COMPACT -> {
-                    val default = RabinChunkingConfig.create(type)
-                    if (custom)
-                        readDetails(default, extra)
-                    return default
-                }
+                FEJOA_RABIN_2KB_8KB_COMPACT -> RabinChunkingConfig.read(type, custom, extra)
             }
-        }
-
-        suspend private fun readDetails(config: FixedSizeChunkingConfig, extra: ByteArray) {
-            val inputStream = ByteArrayInStream(extra)
-            val buffer = ProtocolBufferLight()
-            buffer.read(inputStream)
-            val value = buffer.getLong(FixedSizeDetailTag.SIZE.value)
-            if (value != null)
-                config.size = value.toInt()
-        }
-
-        suspend private fun readDetails(config: RabinChunkingConfig, extra: ByteArray) {
-            val inputStream = ByteArrayInStream(extra)
-            val buffer = ProtocolBufferLight()
-            buffer.read(inputStream)
-            var value = buffer.getLong(RabinDetailTag.TARGET_CHUNK_SIZE.value)
-            if (value != null)
-                config.targetSize = value.toInt()
-            value = buffer.getLong(RabinDetailTag.MIN_CHUNK_SIZE.value)
-            if (value != null)
-                config.minSize = value.toInt()
-            value = buffer.getLong(RabinDetailTag.MAX_CHUNK_SIZE.value)
-            if (value != null)
-                config.maxSize = value.toInt()
         }
     }
 
@@ -223,219 +178,32 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
         return chunkingConfig.getNodeWriteStrategy(normalizeChunkSize)
     }
 
-    interface ChunkingConfig {
-        fun getNodeSplitterFactory(): NodeSplitterFactory {
-            return DefaultNodeSplitter(this, isCompact)
-        }
-        /**
-         * Creates a splitter
-         *
-         * @param factor of how much the chunks should be smaller than in the config (see ChunkContainerNode).
-         * @return
-         */
-        fun getSplitter(factor: Float): ChunkSplitter
-        fun getNodeWriteStrategy(normalizeChunkSize: Boolean): NodeWriteStrategy
-        fun toByteArray(): ByteArray
-        fun clone(): ChunkingConfig
-        val chunkingType: HashType
-        val isCompact: Boolean
-        val isDefault: Boolean
-    }
-
-    class NonChunkingConfig (chunkingType: HashType): ChunkingConfig {
-        override fun getSplitter(factor: Float): ChunkSplitter {
-            throw Exception("Not a chunking hash")
-        }
-
-        override fun getNodeWriteStrategy(normalizeChunkSize: Boolean): NodeWriteStrategy {
-            throw Exception("Not a chunking hash")
-        }
-
-        override fun toByteArray(): ByteArray {
-            return ByteArray(0)
-        }
-
-        override fun clone(): ChunkingConfig {
-            return NonChunkingConfig(chunkingType)
-        }
-
-        override val chunkingType: HashType = chunkingType
-        override val isDefault: Boolean = false
-        override val isCompact: Boolean = false
-    }
-
-    fun setRabinChunking(type: HashType) {
+    fun setRabinChunking(type: HashType): RabinChunkingConfig {
         chunkingConfig = RabinChunkingConfig.create(type)
+        return chunkingConfig as RabinChunkingConfig
     }
 
-    fun setRabinChunking(type: HashType, targetSize: Int, minSize: Int, maxSize: Int) {
+    fun setRabinChunking(type: HashType, targetSize: Int, minSize: Int, maxSize: Int): RabinChunkingConfig {
         val config = RabinChunkingConfig.create(type)
         chunkingConfig = config
         config.targetSize = targetSize
         config.minSize = minSize
         config.maxSize = maxSize
+        return config
     }
 
-    fun setRabinChunking(targetSize: Int, minSize: Int) {
+    fun setRabinChunking(targetSize: Int, minSize: Int): RabinChunkingConfig {
         val config = RabinChunkingConfig.create(FEJOA_RABIN_CUSTOM)
         chunkingConfig = config
         config.targetSize = targetSize
         config.minSize = minSize
+        return config
     }
 
-    fun setFixedSizeChunking(size: Int) {
+    fun setFixedSizeChunking(size: Int): FixedSizeChunkingConfig {
         val config = FixedSizeChunkingConfig.create(FEJOA_FIXED_CUSTOM)
         chunkingConfig = config
         config.size = size
-    }
-
-    class FixedSizeChunkingConfig : ChunkingConfig {
-        override fun getSplitter(factor: Float): ChunkSplitter {
-            return FixedBlockSplitter((factor * size).toInt())
-        }
-
-        override var chunkingType = FEJOA_FIXED_CUSTOM
-            private set
-        internal var size: Int = 0
-        internal var defaultConfig: FixedSizeChunkingConfig? = null
-
-        private constructor(type: HashType, size: Int) {
-            this.chunkingType = type
-            this.size = size
-        }
-
-        override fun getNodeWriteStrategy(normalizeChunkSize: Boolean): NodeWriteStrategy {
-            return FixedSizeNodeWriteStrategy(size, getNodeSplitterFactory(), 0, normalizeChunkSize)
-        }
-
-        override val isCompact: Boolean
-            get() = chunkingType.value and COMPACT_MASK != 0
-
-        override fun toByteArray(): ByteArray {
-            val buffer = ProtocolBufferLight()
-            if (size != defaultConfig!!.size)
-                buffer.put(FixedSizeDetailTag.SIZE.value, size)
-            val outputStream = ByteArrayOutStream()
-            buffer.write(outputStream)
-            return outputStream.toByteArray()
-        }
-
-        private constructor(type: HashType, defaultConfig: FixedSizeChunkingConfig?, size: Int) {
-            this.chunkingType = type
-            this.defaultConfig = defaultConfig
-            this.size = size
-        }
-
-        override fun clone(): ChunkingConfig {
-            return FixedSizeChunkingConfig(chunkingType, defaultConfig, size)
-        }
-
-        override val isDefault: Boolean
-            get() = false
-
-        companion object {
-            fun create(type: HashType): FixedSizeChunkingConfig {
-                val config = getDefault(type)
-                config.defaultConfig = getDefault(type)
-                return config
-            }
-
-            private fun getDefault(type: HashType): FixedSizeChunkingConfig {
-                return when (type) {
-                    FEJOA_FIXED_CUSTOM -> getDefault(FEJOA_FIXED_8K).also { it.chunkingType = FEJOA_FIXED_CUSTOM }
-                    FEJOA_FIXED_8K -> FixedSizeChunkingConfig(FEJOA_FIXED_8K, 8 * 1024)
-                    else -> throw Exception("Unknown chunking type")
-                }
-            }
-        }
-    }
-
-    class RabinChunkingConfig : ChunkingConfig {
-        internal var defaultConfig: RabinChunkingConfig? = null
-        override var chunkingType: HashType
-            internal set
-        internal var targetSize: Int = 0
-        internal var minSize: Int = 0
-        internal var maxSize: Int = 0
-
-        override fun toByteArray(): ByteArray {
-            val buffer = ProtocolBufferLight()
-            if (targetSize != defaultConfig!!.targetSize)
-                buffer.put(RabinDetailTag.TARGET_CHUNK_SIZE.value, targetSize)
-            if (minSize != defaultConfig!!.minSize)
-                buffer.put(RabinDetailTag.MIN_CHUNK_SIZE.value, minSize)
-            if (maxSize != defaultConfig!!.maxSize)
-                buffer.put(RabinDetailTag.MAX_CHUNK_SIZE.value, maxSize)
-
-            val outputStream = ByteArrayOutStream()
-            buffer.write(outputStream)
-            return outputStream.toByteArray()
-        }
-
-        private constructor(type: HashType, targetSize: Int, minSize: Int, maxSize: Int) {
-            this.chunkingType = type
-            this.targetSize = targetSize
-            this.minSize = minSize
-            this.maxSize = maxSize
-        }
-
-        private constructor(type: HashType, defaultConfig: RabinChunkingConfig?, targetSize: Int,
-                            minSize: Int, maxSize: Int) {
-            this.chunkingType = type
-            this.defaultConfig = defaultConfig
-            this.targetSize = targetSize
-            this.minSize = minSize
-            this.maxSize = maxSize
-        }
-
-        override fun getSplitter(factor: Float): ChunkSplitter {
-            return RabinSplitter((factor * targetSize).toInt(), (factor * minSize).toInt(), (factor * maxSize).toInt())
-        }
-
-        override fun getNodeWriteStrategy(normalizeChunkSize: Boolean): NodeWriteStrategy {
-            return DynamicNodeWriteStrategy(getNodeSplitterFactory(), 0, normalizeChunkSize)
-        }
-
-        override val isCompact: Boolean
-            get() = chunkingType.value and COMPACT_MASK != 0
-
-        override fun clone(): ChunkingConfig {
-            return RabinChunkingConfig(chunkingType, defaultConfig, targetSize, minSize, maxSize)
-        }
-
-        override fun equals(o: Any?): Boolean {
-            if (o !is RabinChunkingConfig)
-                return false
-            if (o.chunkingType != chunkingType)
-                return false
-            if (o.minSize != minSize)
-                return false
-            if (o.targetSize != targetSize)
-                return false
-            return if (o.maxSize != maxSize) false else true
-        }
-
-        override val isDefault: Boolean
-            get() = this == defaultConfig
-
-        companion object {
-
-            fun create(type: HashType): RabinChunkingConfig {
-                val config = getDefault(type)
-                config.defaultConfig = getDefault(type)
-                return config
-            }
-
-            private fun getDefault(type: HashType): RabinChunkingConfig {
-                return when (type) {
-                    FEJOA_RABIN_CUSTOM -> getDefault(FEJOA_RABIN_2KB_8KB).also { it.chunkingType = FEJOA_RABIN_CUSTOM }
-                    FEJOA_RABIN_2KB_8KB -> RabinChunkingConfig(FEJOA_RABIN_2KB_8KB, 8 * 1024, 2 * 1024,
-                            Int.MAX_VALUE / 2)
-                    FEJOA_RABIN_2KB_8KB_COMPACT -> RabinChunkingConfig(FEJOA_RABIN_2KB_8KB_COMPACT, 8 * 1024, 2 * 1024,
-                            Int.MAX_VALUE / 2)
-                    else -> throw Exception("Unknown chunking type")
-                }
-            }
-        }
+        return config
     }
 }
