@@ -8,8 +8,8 @@ import org.fejoa.crypto.HashOutStreamFactory
 import org.fejoa.storage.FixedBlockSplitter
 import org.fejoa.storage.HashValue
 import org.fejoa.storage.RabinSplitter
-import org.fejoa.storage.RabinSplitter.Companion.CHUNK_64KB
-import org.fejoa.storage.RabinSplitter.Companion.CHUNK_8KB
+import org.fejoa.storage.DynamicSplitter.Companion.CHUNK_64KB
+import org.fejoa.storage.DynamicSplitter.Companion.CHUNK_8KB
 import org.fejoa.support.Random
 import org.fejoa.support.toUTF
 import kotlin.system.measureTimeMillis
