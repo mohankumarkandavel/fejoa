@@ -36,8 +36,8 @@ class CommitCache(private val repository: Repository) {
     suspend fun isAncestor(baseCommit: Hash, ancestorCandidate: Hash): Boolean {
         val commitBox = getCommit(baseCommit) ?: throw Exception("Can't load commit: $baseCommit")
         for (parent in commitBox.parents) {
-            val parentCommit = loadCommit(parent.hash)
-            val parentHash = parentCommit.getRef().hash
+            val parentCommit = loadCommit(parent)
+            val parentHash = parentCommit.getHash()
             if (parentHash == ancestorCandidate)
                 return true
             if (isAncestor(parentHash, ancestorCandidate))

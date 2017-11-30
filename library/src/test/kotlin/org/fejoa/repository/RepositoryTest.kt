@@ -91,7 +91,7 @@ class RepositoryTest : RepositoryTestBase() {
         repository.commit(ByteArray(0), simpleCommitSignature)
         containsContent(repository, content)
         val tip = repository.getHead()
-        assertEquals(tip, repository.getHeadCommit()!!.getRef().hash)
+        assertEquals(tip, repository.getHeadCommit()!!.getHash())
 
         repository = Repository.open(branch, repository.getRepositoryRef(), storage, repoConfig.crypto)
         containsContent(repository, content)

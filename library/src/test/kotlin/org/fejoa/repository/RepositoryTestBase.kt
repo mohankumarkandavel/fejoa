@@ -140,7 +140,7 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
         suspend fun verifyCommit(repo: Repository, commit: TestCommit) {
             repo.setHeadCommit(commit.hash)
             val repoHead = repo.getHeadCommit() ?: throw Exception("Should not be null")
-            assertEquals(commit.directory.hash, repoHead.dir.hash)
+            assertEquals(commit.directory.hash, repoHead.dir)
             assertEquals(commit.message, repoHead.message.toUTFString())
             assertEquals(commit.parents.size, repoHead.parents.size)
             val nBlobs = verifyDir(repo, commit.directory, "")

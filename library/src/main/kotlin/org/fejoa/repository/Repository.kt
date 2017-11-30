@@ -1,7 +1,6 @@
 package org.fejoa.repository
 
 import org.fejoa.chunkcontainer.*
-import org.fejoa.crypto.CryptoHelper
 import org.fejoa.crypto.CryptoSettings
 import org.fejoa.crypto.SecretKey
 import org.fejoa.storage.*
@@ -111,16 +110,16 @@ class Repository private constructor(private val branch: String,
             if (headCommit == null)
                 throw Exception("Invalid commit hash: ${commit.value}")
         }
-        val rootDir = Directory.readRoot(headCommit!!.dir.hash, objectIndex)
+        val rootDir = Directory.readRoot(headCommit!!.dir, objectIndex)
         ioDatabase.setRootDirectory(rootDir)
     }
 
     override suspend fun getHead(): Hash {
-        return getHeadCommit()?.getRef()?.hash?.clone() ?: Hash()
+        return getHeadCommit()?.getHash()?.clone() ?: Hash()
     }
 
     private fun getParents(): Collection<HashValue> {
-        return headCommit?.parents?.map { it.hash.value } ?: emptyList()
+        return headCommit?.parents?.map { it.value } ?: emptyList()
     }
 
     suspend override fun merge(mergeParents: Collection<Database>, mergeStrategy: IMergeStrategy)
@@ -140,8 +139,8 @@ class Repository private constructor(private val branch: String,
         if (headCommit == null)
             return ioDatabase.treeAccessor.root.getChildren().isNotEmpty()
 
-        val headHash = headCommit!!.dir.hash
-        val dirHash = ioDatabase.flush().hash
+        val headHash = headCommit!!.dir
+        val dirHash = ioDatabase.flush()
         if (headHash != dirHash)
             return true
         return false
@@ -201,7 +200,7 @@ class Repository private constructor(private val branch: String,
         // add commit
         writeCommit(theirsCommit)
         // add directory
-        val theirsRoot = Directory.readRoot(theirsCommit.dir.hash, theirsObjectIndex)
+        val theirsRoot = Directory.readRoot(theirsCommit.dir, theirsObjectIndex)
         writeTree(theirsRoot)
         // add blobs
         val diff = ioDatabase.getRootDirectory().getDiff(theirsRoot,
@@ -215,7 +214,7 @@ class Repository private constructor(private val branch: String,
                     objectIndex.putBlob(it.path, container)
                 }
         for (parentRef in theirsCommit.parents) {
-            val parent = theirsCommitCache.getCommit(parentRef.hash) ?: throw Exception("Can't load commit")
+            val parent = theirsCommitCache.getCommit(parentRef) ?: throw Exception("Can't load commit")
             copyMissingObjectRefs(parent, theirsObjectIndex, commitCache)
         }
     }
@@ -244,7 +243,7 @@ class Repository private constructor(private val branch: String,
 
         // flush in any case to write open write handles and to be able to determine if we need to commit
         val rootTree = ioDatabase.flush()
-        if (mergeParents.isEmpty() && headCommit != null && headCommit!!.dir.hash == rootTree.hash)
+        if (mergeParents.isEmpty() && headCommit != null && headCommit!!.getHash() == rootTree)
             return Hash()
 
         // write entries to the objectIndex
@@ -256,24 +255,24 @@ class Repository private constructor(private val branch: String,
         // write the rootTree to the object index
         val commit = Commit(rootTree)
         if (headCommit != null)
-            commit.parents.add(headCommit!!.getRef())
+            commit.parents.add(headCommit!!.getHash())
         for (mergeParent in mergeParents)
-            commit.parents.add(CommitRef(mergeParent))
+            commit.parents.add(mergeParent)
         if (commitSignature != null)
-            commit.message = commitSignature.signMessage(message, rootTree.hash.value, getParents())
+            commit.message = commitSignature.signMessage(message, rootTree.value, getParents())
         else
             commit.message = message
         writeCommit(commit)
         headCommit = commit
 
         val objectIndexRef =  objectIndex.flush()
-        val repoRef = RepositoryRef(objectIndexRef, commit.getRef().hash)
+        val repoRef = RepositoryRef(objectIndexRef, commit.getHash())
         transaction.finishTransaction()
         log.add(branchLogIO.logHash(repoRef), branchLogIO.writeToLog(repoRef), transaction.getObjectsWritten())
         transaction = LogRepoTransaction(accessors.startTransaction())
         ioDatabase.setTransaction(transaction)
 
-        return commit.getRef().hash
+        return commit.getHash()
     }
 
     suspend fun getRepositoryRef(): RepositoryRef {

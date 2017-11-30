@@ -7,59 +7,20 @@ import org.fejoa.protocolbufferlight.VarInt
 import org.fejoa.storage.*
 import org.fejoa.support.*
 
-enum class ObjectType(val value: Int) {
-    COMMIT_V1(1),
-    FLAT_DIR_V1(2)
-}
 
-open class ObjectRef(val type: ObjectType, val hash: Hash) {
-    companion object {
-        suspend fun read(inStream: AsyncInStream): ObjectRef {
-            val typeValue = inStream.readByte().toInt()
-            val type = ObjectType.values().firstOrNull { it.value == typeValue}
-                    ?: throw Exception("Unknown object type $typeValue")
-            val hash = Hash.read(inStream)
-            return ObjectRef(type, hash)
-        }
-    }
-
-    suspend fun write(outStream: AsyncOutStream) {
-        outStream.writeByte(type.value.toByte())
-        hash.write(outStream)
-    }
-}
-
-class CommitRef(hash: Hash) : ObjectRef(ObjectType.COMMIT_V1, hash) {
-    companion object {
-        suspend fun read(inStream: AsyncInStream): CommitRef {
-            val ref = ObjectRef.read(inStream)
-            return when (ref.type) {
-                ObjectType.COMMIT_V1 -> CommitRef(ref.hash)
-                ObjectType.FLAT_DIR_V1 -> throw Exception("Wrong object type")
-            }
-        }
-    }
-}
-class DirectoryRef(hash: Hash) : ObjectRef(ObjectType.FLAT_DIR_V1, hash) {
-    companion object {
-        suspend fun read(inStream: AsyncInStream): DirectoryRef {
-            val ref = ObjectRef.read(inStream)
-            return when (ref.type) {
-                ObjectType.COMMIT_V1 -> throw Exception("Wrong object type")
-                ObjectType.FLAT_DIR_V1 -> DirectoryRef(ref.hash)
-            }
-        }
-    }
-}
-
-class Commit(var dir: DirectoryRef, val hashSpec: HashSpec = HashSpec(HashSpec.DEFAULT)) {
+class Commit(var dir: Hash, val hashSpec: HashSpec = HashSpec(HashSpec.DEFAULT)) {
+    // |type (1|
     // |Directory ObjectRef|
     // [n parents]
     // {list of parent ObjectRefs}
     // {message}
 
-    val parents: MutableList<CommitRef> = ArrayList()
+    val parents: MutableList<Hash> = ArrayList()
     var message: ByteArray = ByteArray(0)
+
+    enum class CommitType(val value: Int) {
+        COMMIT_V1(1)
+    }
 
     companion object {
         suspend fun read(hash: Hash, objectIndex: ObjectIndex): Commit {
@@ -69,12 +30,16 @@ class Commit(var dir: DirectoryRef, val hashSpec: HashSpec = HashSpec(HashSpec.D
         }
 
         suspend private fun read(inStream: AsyncInStream): Commit {
-            val dir = DirectoryRef.read(inStream)
+            val type = inStream.readByte().toInt()
+            if (type != CommitType.COMMIT_V1.value)
+                throw Exception("Unexpected commit type; $type")
+
+            val dir = Hash.read(inStream)
             val nParents = VarInt.read(inStream).first
 
             val commit = Commit(dir)
             for (i in 0 until nParents) {
-                commit.parents += CommitRef.read(inStream)
+                commit.parents += Hash.read(inStream)
             }
             commit.message = inStream.readVarIntDelimited().first
             return commit
@@ -82,6 +47,7 @@ class Commit(var dir: DirectoryRef, val hashSpec: HashSpec = HashSpec(HashSpec.D
     }
 
     suspend fun write(outStream: AsyncOutStream) {
+        outStream.write(CommitType.COMMIT_V1.value)
         dir.write(outStream)
         VarInt.write(outStream, parents.size)
         for (parent in parents)
@@ -90,15 +56,10 @@ class Commit(var dir: DirectoryRef, val hashSpec: HashSpec = HashSpec(HashSpec.D
     }
 
     suspend fun getHash(): Hash {
-        return getRef().hash
-    }
-
-    suspend fun getRef(): CommitRef {
         val hashOutStream = hashSpec.getHashOutStream()
         val outStream = AsyncHashOutStream(AsyncByteArrayOutStream(), hashOutStream)
         write(outStream)
         outStream.close()
-        val hash = Hash(hashSpec, HashValue(hashOutStream.hash()))
-        return CommitRef(hash)
+        return Hash(hashSpec, HashValue(hashOutStream.hash()))
     }
 }

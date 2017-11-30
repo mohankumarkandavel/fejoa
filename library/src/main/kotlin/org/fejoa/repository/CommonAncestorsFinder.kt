@@ -81,16 +81,16 @@ object CommonAncestorsFinder {
             for (p in 1 until parents.size) {
                 val parent = parents.get(p)
                 val clone = commitChain.clone()
-                val nextCommit = commitCache.getCommit(parent.hash)
-                        ?: throw Exception("Can't find commit ${parent.hash.value}")
+                val nextCommit = commitCache.getCommit(parent)
+                        ?: throw Exception("Can't find commit ${parent.value}")
                 clone.commits.add(nextCommit)
                 result.chains.add(clone)
                 // follow this chain for a bit so that we stay on the same depth level
                 loadCommits(commitCache, clone, numberOfCommits - i - 1, result)
             }
 
-            oldest = commitCache.getCommit(parents[0].hash)
-                    ?: throw Exception("Can't find commit ${parents[0].hash.value}")
+            oldest = commitCache.getCommit(parents[0])
+                    ?: throw Exception("Can't find commit ${parents[0].value}")
             commitChain.commits.add(oldest)
         }
     }
@@ -99,7 +99,7 @@ object CommonAncestorsFinder {
         //TODO: can be optimized by remembering which combinations we already checked, i.e. maintain a marker per chain
         for (other in otherChain.commits) {
             for (local in localChain.commits) {
-                if (local.getRef().hash == other.getRef().hash)
+                if (local.getHash() == other.getHash())
                     return other
             }
         }

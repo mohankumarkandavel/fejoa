@@ -184,7 +184,7 @@ class IODatabaseCC(root: Directory, val objectIndex: ObjectIndex,
         }
     }
 
-    suspend fun flush(): DirectoryRef {
+    suspend fun flush(): Hash {
         getModifiedChunkContainer().forEach {
             treeAccessor.putBlob(it.key, it.value.ref.hash)
         }
@@ -198,7 +198,7 @@ class IODatabaseCC(root: Directory, val objectIndex: ObjectIndex,
                 treeAccessor.putBlob(path, randomDataAccess.getChunkContainer()!!.ref.hash)
             }
         }
-        return DirectoryRef(treeAccessor.build())
+        return treeAccessor.build()
     }
 
     suspend override fun open(path: String, mode: RandomDataAccess.Mode): RandomDataAccess = synchronized(this) {

@@ -89,6 +89,10 @@ class Directory(nameAttrData: NameAttrData, hash: Hash = Hash(HashSpec(HashSpec.
         return children
     }
 
+    enum class DirType(val value: Int) {
+        FLAT_DIR(1)
+    }
+
     companion object {
         suspend fun readRoot(hash: Hash, objectIndex: ObjectIndex): Directory {
             val container = objectIndex.getDirChunkContainer(hash)
@@ -97,6 +101,10 @@ class Directory(nameAttrData: NameAttrData, hash: Hash = Hash(HashSpec(HashSpec.
         }
 
         suspend private fun readRoot(inStream: AsyncInStream): Directory {
+            val type = inStream.readByte().toInt()
+            if (type != DirType.FLAT_DIR.value)
+                throw Exception("Unsupported directory type: $type")
+
             val dir = Directory(NameAttrData(""))
             readChildren(dir, inStream)
             return dir
@@ -148,6 +156,7 @@ class Directory(nameAttrData: NameAttrData, hash: Hash = Hash(HashSpec(HashSpec.
     }
 
     suspend fun writeRoot(outStream: AsyncOutStream) {
+        outStream.write(DirType.FLAT_DIR.value)
         writeChildren(outStream)
     }
 
