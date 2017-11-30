@@ -20,7 +20,7 @@ open class ChunkContainerTestBase {
     protected var storageBackend: StorageBackend? = null
 
     @BeforeTest
-    open fun setUp() = runBlocking {
+    fun setUp() = runBlocking {
         secretKey = CryptoHelper.crypto.generateSymmetricKey(settings.symmetric).await()
         storageBackend = platformCreateStorage()
     }

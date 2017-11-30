@@ -14,19 +14,7 @@ import kotlin.test.assertNotNull
 
 
 open class RepositoryTestBase : ChunkContainerTestBase() {
-    protected var branchLogIO: BranchLogIO? = null
-
     protected class DatabaseStringEntry(var path: String, var content: String)
-
-    @BeforeTest
-    override fun setUp() {
-        super.setUp()
-
-        runBlocking {
-            //branchLogIO = RepositoryBuilder.getPlainBranchLogIO()
-            branchLogIO = RepositoryBuilder.getEncryptedBranchLogIO(CryptoHelper.crypto, secretKey!!, settings.symmetric)
-        }
-    }
 
     protected suspend fun add(database: Repository, content: MutableMap<String, DatabaseStringEntry>, entry: DatabaseStringEntry) {
         content.put(entry.path, entry)
@@ -60,7 +48,7 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
         val storage = prepareStorage(dirName, branch)
         val repoConfig = getRepoConfig()
         repoConfig.hashSpec.setFixedSizeChunking(500)
-        return Repository.create(branch, storage, branchLogIO!!, repoConfig)
+        return Repository.create(branch, storage, repoConfig)
     }
 
     internal class TestBlob(val content: String)
@@ -90,7 +78,7 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
 
         suspend fun clone(): TestRepository {
             val clone = TestRepository(Repository.open(repository.getBranch(), repository.getRepositoryRef(),
-                    repository.branchBackend, repository.branchLogIO, repository.config.crypto), head)
+                    repository.branchBackend, repository.config.crypto), head)
             clone.head?.let {
                 clone.repository.setHeadCommit(it.hash)
             }

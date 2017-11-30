@@ -1,6 +1,7 @@
 package org.fejoa.repository
 
 import org.fejoa.chunkcontainer.*
+import org.fejoa.crypto.CryptoHelper
 import org.fejoa.crypto.CryptoSettings
 import org.fejoa.crypto.SecretKey
 import org.fejoa.storage.*
@@ -45,17 +46,23 @@ class Repository private constructor(private val branch: String,
                                      transaction: ChunkAccessors.Transaction,
                                      val log: BranchLog,
                                      val objectIndex: ObjectIndex,
-                                     val branchLogIO: BranchLogIO,
                                      val config: RepositoryConfig): Database {
     private var transaction: LogRepoTransaction = LogRepoTransaction(transaction)
     private var headCommit: Commit? = null
     val commitCache = CommitCache(this)
     val ioDatabase = IODatabaseCC(Directory(""), objectIndex, transaction, config.containerSpec)
     private val mergeParents = ArrayList<Hash>()
+    val branchLogIO: BranchLogIO
+
+    init {
+        if (config.crypto != null)
+            branchLogIO = RepositoryBuilder.getEncryptedBranchLogIO(config.crypto.secretKey, config.crypto.symmetric)
+        else
+            branchLogIO = RepositoryBuilder.getPlainBranchLogIO()
+    }
 
     companion object {
-        fun create(branch: String, branchBackend: StorageBackend.BranchBackend, branchLogIO: BranchLogIO,
-                   config: RepositoryConfig): Repository {
+        fun create(branch: String, branchBackend: StorageBackend.BranchBackend, config: RepositoryConfig): Repository {
             val containerSpec = config.containerSpec
             val accessors: ChunkAccessors = RepoChunkAccessors(branchBackend.getChunkStorage(), config)
             val log: BranchLog = branchBackend.getBranchLog()
@@ -63,11 +70,11 @@ class Repository private constructor(private val branch: String,
             val objectIndexCC = ChunkContainer.create(transaction.getObjectIndexAccessor(containerSpec),
                     containerSpec)
             val objectIndex = ObjectIndex.create(config, objectIndexCC)
-            return Repository(branch, branchBackend, accessors, transaction, log, objectIndex, branchLogIO, config)
+            return Repository(branch, branchBackend, accessors, transaction, log, objectIndex, config)
         }
 
         suspend fun open(branch: String, ref: RepositoryRef, branchBackend: StorageBackend.BranchBackend,
-                         branchLogIO: BranchLogIO, crypto: CryptoConfig?): Repository {
+                         crypto: CryptoConfig?): Repository {
             val repoConfig = RepositoryConfig(crypto, ref.objectIndexRef.hash.spec, ref.objectIndexRef.boxSpec)
 
             val containerSpec = repoConfig.containerSpec
@@ -78,8 +85,7 @@ class Repository private constructor(private val branch: String,
                     ref.objectIndexRef)
             val objectIndex = ObjectIndex.open(repoConfig, objectIndexCC)
 
-            val repository = Repository(branch, branchBackend, accessors, transaction, log, objectIndex, branchLogIO,
-                    repoConfig)
+            val repository = Repository(branch, branchBackend, accessors, transaction, log, objectIndex, repoConfig)
             repository.setHeadCommit(ref.head)
             return repository
         }

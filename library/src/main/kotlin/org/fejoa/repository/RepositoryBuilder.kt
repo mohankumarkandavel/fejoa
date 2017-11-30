@@ -1,6 +1,6 @@
 package org.fejoa.repository
 
-import org.fejoa.crypto.CryptoInterface
+import org.fejoa.crypto.CryptoHelper
 import org.fejoa.crypto.CryptoSettings
 import org.fejoa.crypto.SecretKey
 import org.fejoa.protocolbufferlight.ProtocolBufferLight
@@ -42,12 +42,12 @@ object RepositoryBuilder {
     private val TAG_IV = 0
     private val TAG_ENCDATA = 1
 
-    fun getEncryptedBranchLogIO(crypto: CryptoInterface, key: SecretKey, symmetric: CryptoSettings.Symmetric)
+    fun getEncryptedBranchLogIO(key: SecretKey, symmetric: CryptoSettings.Symmetric)
             : BranchLogIO = object: BranchLogIO {
 
         override suspend fun writeToLog(repoRef: RepositoryRef): String {
             val buffer = commitPointerToLog(repoRef)
-
+            val crypto = CryptoHelper.crypto
             val iv = crypto.generateInitializationVector(symmetric.ivSize)
             val encryptedMessage = crypto.encryptSymmetric(buffer, key, iv, symmetric).await()
             val protoBuffer = ProtocolBufferLight()
@@ -60,7 +60,7 @@ object RepositoryBuilder {
             val protoBuffer = ProtocolBufferLight(logEntry.decodeBase64())
             val iv = protoBuffer.getBytes(TAG_IV) ?: throw Exception("IV expected")
             val encData = protoBuffer.getBytes(TAG_ENCDATA) ?: throw Exception("Encrypted data expected")
-            val plain = crypto.decryptSymmetric(encData, key, iv, symmetric).await()
+            val plain = CryptoHelper.crypto.decryptSymmetric(encData, key, iv, symmetric).await()
             return commitPointerFromLog(plain)
         }
     }
