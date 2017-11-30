@@ -4,7 +4,6 @@ import kotlinx.coroutines.experimental.runBlocking
 import org.fejoa.chunkcontainer.Hash
 import org.fejoa.chunkcontainer.HashSpec
 import org.fejoa.crypto.CryptoHelper
-import org.fejoa.crypto.platformCrypto
 import org.fejoa.storage.HashValue
 import org.fejoa.storage.Database
 import org.fejoa.storage.KeepOursUnchanged
@@ -17,7 +16,7 @@ import kotlin.test.assertTrue
 
 class DiffMergeTest : RepositoryTestBase() {
     suspend private fun addFile(box: Directory, name: String): BlobEntry {
-        val dataHash = HashValue(CryptoHelper.sha256Hash(platformCrypto().generateSalt()))
+        val dataHash = HashValue(CryptoHelper.sha256Hash(CryptoHelper.crypto.generateSalt()))
 
         val entry = BlobEntry(name, Hash(HashSpec(), dataHash))
         box.put(entry)

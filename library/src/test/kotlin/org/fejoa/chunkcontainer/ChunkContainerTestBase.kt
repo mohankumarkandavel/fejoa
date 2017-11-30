@@ -1,10 +1,7 @@
 package org.fejoa.chunkcontainer
 
 import kotlinx.coroutines.experimental.runBlocking
-import org.fejoa.crypto.CryptoSettings
-import org.fejoa.crypto.CryptoInterface
-import org.fejoa.crypto.SecretKey
-import org.fejoa.crypto.platformCrypto
+import org.fejoa.crypto.*
 import org.fejoa.repository.*
 import org.fejoa.storage.*
 import org.fejoa.support.AsyncInStream
@@ -19,13 +16,12 @@ import kotlin.test.AfterTest
 open class ChunkContainerTestBase {
     protected val cleanUpList: MutableList<String> = ArrayList()
     protected var settings = CryptoSettings.default
-    protected var cryptoInterface: CryptoInterface = platformCrypto()
     protected var secretKey: SecretKey? = null
     protected var storageBackend: StorageBackend? = null
 
     @BeforeTest
     open fun setUp() = runBlocking {
-        secretKey = cryptoInterface.generateSymmetricKey(settings.symmetric).await()
+        secretKey = CryptoHelper.crypto.generateSymmetricKey(settings.symmetric).await()
         storageBackend = platformCreateStorage()
     }
 
@@ -50,7 +46,7 @@ open class ChunkContainerTestBase {
     private fun ChunkStorage.prepare(): ChunkAccessor {
         // first compressed then encrypted
         return this.startTransaction().toChunkAccessor()
-                .encrypted(cryptoInterface, secretKey!!, settings.symmetric).compressed()
+                .encrypted(CryptoHelper.crypto, secretKey!!, settings.symmetric).compressed()
     }
 
     protected fun getRepoConfig(): RepositoryConfig {

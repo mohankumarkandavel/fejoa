@@ -24,7 +24,7 @@ class BCCryptoInterfaceTest {
     //@Throws(CryptoException::class, IOException::class)
     private fun doTest(settings: CryptoSettings) {
         runBlocking {
-            val cryptoInterface = platformCrypto()
+            val cryptoInterface = CryptoHelper.crypto
             val keyPair = cryptoInterface.generateKeyPair(settings.publicKey).await()
 
             // encrypt asymmetric + signature
@@ -93,7 +93,7 @@ class BCCryptoInterfaceTest {
         runBlocking {
             val settings = CryptoSettings.default
 
-            val cryptoInterface = platformCrypto()
+            val cryptoInterface = CryptoHelper.crypto
 
             // encrypt symmetric
             val clearTextSym = "hello crypto symmetric"

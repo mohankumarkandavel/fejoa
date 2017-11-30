@@ -1,7 +1,6 @@
 package org.fejoa.repository
 
 import org.fejoa.chunkcontainer.BoxSpec
-import org.fejoa.chunkcontainer.ChunkContainerRef
 import org.fejoa.chunkcontainer.ContainerSpec
 import org.fejoa.crypto.CryptoHelper
 import org.fejoa.storage.*
@@ -58,7 +57,7 @@ class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryCo
                     BoxSpec.EncryptionInfo.Type.PLAIN -> accessor
                     BoxSpec.EncryptionInfo.Type.PARENT -> {
                         val cryptoConfig = repoConfig.crypto ?: throw Exception("Missing crypto data")
-                        accessor.encrypted(CryptoHelper.crypo, cryptoConfig.secretKey, cryptoConfig.symmetric)
+                        accessor.encrypted(CryptoHelper.crypto, cryptoConfig.secretKey, cryptoConfig.symmetric)
                     }
                 }
             }

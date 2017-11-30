@@ -2,6 +2,7 @@ package org.fejoa.repository
 
 import kotlinx.coroutines.experimental.runBlocking
 import org.fejoa.chunkcontainer.*
+import org.fejoa.crypto.CryptoHelper
 import org.fejoa.storage.KeepOursUnchanged
 import org.fejoa.support.PathUtils
 import org.fejoa.support.toUTF
@@ -23,7 +24,7 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
 
         runBlocking {
             //branchLogIO = RepositoryBuilder.getPlainBranchLogIO()
-            branchLogIO = RepositoryBuilder.getEncryptedBranchLogIO(cryptoInterface, secretKey!!, settings.symmetric)
+            branchLogIO = RepositoryBuilder.getEncryptedBranchLogIO(CryptoHelper.crypto, secretKey!!, settings.symmetric)
         }
     }
 

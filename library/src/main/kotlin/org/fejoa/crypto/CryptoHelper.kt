@@ -6,7 +6,7 @@ import org.fejoa.support.toUTF
 
 class CryptoHelper {
     companion object {
-        val crypo: CryptoInterface by lazy { platformCrypto() }
+        val crypto: CryptoInterface by lazy { platformCrypto() }
 
         fun sha256Hash(): AsyncHashOutStream {
             return getInstanceHashOutStream("SHA-256")

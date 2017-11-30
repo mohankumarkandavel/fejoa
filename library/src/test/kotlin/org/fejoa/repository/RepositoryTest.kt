@@ -3,8 +3,8 @@ package org.fejoa.repository
 import org.fejoa.support.Random
 import kotlinx.coroutines.experimental.runBlocking
 import org.fejoa.chunkcontainer.*
+import org.fejoa.crypto.CryptoHelper
 import org.fejoa.crypto.CryptoSettings
-import org.fejoa.crypto.platformCrypto
 import org.fejoa.storage.*
 import org.fejoa.support.*
 import kotlin.test.Test
@@ -31,7 +31,7 @@ class RepositoryTest : RepositoryTestBase() {
         val branch = "testEnc"
 
         val storage = prepareStorage(dirName, branch)
-        val crypto = platformCrypto()
+        val crypto = CryptoHelper.crypto
         val settings = CryptoSettings.default
         val secretKey = crypto.generateSymmetricKey(settings.symmetric).await()
         val rawAccessor = storage.getChunkStorage().startTransaction().toChunkAccessor()
