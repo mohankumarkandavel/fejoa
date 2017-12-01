@@ -12,7 +12,7 @@ import org.fejoa.support.InStream
 class DataChunk(private var data: ByteArray, private var dataLength: Int = data.size) : Chunk {
     constructor() : this(ByteArray(0), 0)
 
-    override fun getData(): ByteArray {
+    override suspend fun getData(): ByteArray {
         if (data.size == dataLength)
             return data
         return data.copyOfRange(0, dataLength)

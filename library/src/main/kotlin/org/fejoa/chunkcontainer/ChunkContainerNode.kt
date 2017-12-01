@@ -11,7 +11,7 @@ import org.fejoa.support.*
 
 interface NodeSplitterFactory {
     fun nodeSizeFactor(level: Int): Float
-    fun create(level: Int): ChunkSplitter
+    suspend fun create(level: Int): ChunkSplitter
 }
 
 open class ChunkContainerNode : Chunk {
@@ -32,7 +32,6 @@ open class ChunkContainerNode : Chunk {
         this.that = ChunkPointer(this, level, compact)
         this.hashOutStream = hashOutStream
         this.nodeWriter = nodeWriter.newInstance(level)
-        resetNodeSplitter()
     }
 
     private constructor(blobAccessor: ChunkAccessor, parent: ChunkContainerNode, nodeWriter: NodeWriteStrategy,
@@ -42,16 +41,17 @@ open class ChunkContainerNode : Chunk {
         this.that = that
         this.hashOutStream = hashOutStream
         this.nodeWriter = nodeWriter.newInstance(level)
-        resetNodeSplitter()
     }
 
-    private fun resetNodeSplitter() {
+    suspend private fun resetNodeSplitter(): ChunkSplitter {
         nodeWriter.reset(level)
+        val splitter = nodeWriter.getSplitter()
         // Write dummy to later split at the right position.
         // For example:
         // |dummy|h1|h2|h3 (containing the trigger t)|
         // this results in the node: |h1|h2|h3|..t|
-        nodeWriter.splitter.write(ByteArray(Config.DATA_HASH_SIZE))
+        splitter.write(ByteArray(Config.DATA_HASH_SIZE))
+        return splitter
     }
 
     val isRootNode: Boolean
@@ -205,13 +205,13 @@ open class ChunkContainerNode : Chunk {
      * the remaining part of the node.
      */
     suspend private fun balance(): Pair<ChunkContainerNode, ChunkContainerNode?> {
-        resetNodeSplitter()
+        val splitter = resetNodeSplitter()
 
         val size = size()
         for (i in 0..size - 1) {
             val child = get(i)
-            nodeWriter.splitter.write(child.dataHash.bytes)
-            if (nodeWriter.splitter.isTriggered) {
+            splitter.write(child.dataHash.bytes)
+            if (splitter.isTriggered) {
                 // split leftover into a right node
                 if (i == size - 1) // all good
                     return this to null
@@ -237,8 +237,8 @@ open class ChunkContainerNode : Chunk {
 
                 neighbour.removeBlobPointer(0, true)
                 addBlobPointer(pointer)
-                nodeWriter.splitter.write(pointer.dataHash.bytes)
-                if (nodeWriter.splitter.isTriggered)
+                splitter.write(pointer.dataHash.bytes)
+                if (splitter.isTriggered)
                     break
 
                 if (nextNeighbour != null)
@@ -361,7 +361,7 @@ open class ChunkContainerNode : Chunk {
         onDisk = true
     }
 
-    override fun getData(): ByteArray {
+    override suspend fun getData(): ByteArray {
         if (data != null)
             return data!!
         val outputStream = ByteArrayOutStream()

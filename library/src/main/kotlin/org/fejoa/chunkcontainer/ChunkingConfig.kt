@@ -17,7 +17,7 @@ interface ChunkingConfig {
      * @param factor of how much the chunks should be smaller than in the config (see ChunkContainerNode).
      * @return
      */
-    fun getSplitter(factor: Float): ChunkSplitter
+    suspend fun getSplitter(factor: Float): ChunkSplitter
     fun getNodeWriteStrategy(normalizeChunkSize: Boolean): NodeWriteStrategy
     fun toByteArray(): ByteArray
     fun clone(): ChunkingConfig
@@ -27,7 +27,7 @@ interface ChunkingConfig {
 }
 
 class NonChunkingConfig (chunkingType: HashSpec.HashType): ChunkingConfig {
-    override fun getSplitter(factor: Float): ChunkSplitter {
+    override suspend fun getSplitter(factor: Float): ChunkSplitter {
         throw Exception("Not a chunking hash")
     }
 
@@ -64,7 +64,7 @@ class FixedSizeChunkingConfig : ChunkingConfig {
         this.size = size
     }
 
-    override fun getSplitter(factor: Float): ChunkSplitter {
+    override suspend fun getSplitter(factor: Float): ChunkSplitter {
         return FixedBlockSplitter((factor * size).toInt())
     }
 

@@ -9,19 +9,22 @@ import org.fejoa.storage.HashValue
 
 
 class ChunkHash(dataSplitter: ChunkSplitter,
-                private val dataLeafSplitter: ChunkSplitter,
                 private val nodeSplitter: ChunkSplitter,
                 private val hashOutStreamFactory: HashOutStreamFactory) : AsyncHashOutStream {
     companion object {
         val DATA_LEVEL = 0
         val DATA_LEAF_LEVEL = 1
+
+        suspend fun create(nodeSplitterFactory: NodeSplitterFactory, hashOutStreamFactory: HashOutStreamFactory)
+                : ChunkHash {
+            return ChunkHash(nodeSplitterFactory.create(DATA_LEVEL), nodeSplitterFactory.create(DATA_LEAF_LEVEL),
+                    hashOutStreamFactory)
+        }
+
+        suspend fun create(hashSpec: HashSpec): ChunkHash {
+            return create(hashSpec.getNodeSplitterFactory(), hashSpec.getBaseHashFactory())
+        }
     }
-
-    constructor(hashSpec: HashSpec) : this(hashSpec.getNodeSplitterFactory(), hashSpec.getBaseHashFactory())
-
-    constructor(nodeSplitterFactory: NodeSplitterFactory, hashOutStreamFactory: HashOutStreamFactory)
-            : this(nodeSplitterFactory.create(DATA_LEVEL), nodeSplitterFactory.create(DATA_LEAF_LEVEL),
-            nodeSplitterFactory.create(DATA_LEAF_LEVEL + 1), hashOutStreamFactory)
 
     private var currentLayer: Layer = Layer(dataSplitter, false, DATA_LEVEL)
 
@@ -165,10 +168,7 @@ class ChunkHash(dataSplitter: ChunkSplitter,
                     upperLayer = cachedUpperLayer
                 else {
                     val nextLevel = level + 1
-                    val splitter = when (nextLevel) {
-                        DATA_LEAF_LEVEL -> newDataLeafSplitter()
-                        else -> newNodeSplitter()
-                    }
+                    val splitter = newNodeSplitter()
                     upperLayer = Layer(splitter, true, nextLevel)
                 }
             }
@@ -210,10 +210,6 @@ class ChunkHash(dataSplitter: ChunkSplitter,
 
     protected fun newNodeSplitter(): ChunkSplitter {
         return nodeSplitter.newInstance()
-    }
-
-    protected fun newDataLeafSplitter(): ChunkSplitter {
-        return dataLeafSplitter.newInstance()
     }
 
     suspend override fun flush() {

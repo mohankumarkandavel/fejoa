@@ -109,11 +109,12 @@ class ChunkContainerOutStream(private val container: ChunkContainer,
                 throw Exception("Index out of bounds")
 
             var splitOnLastByte = false
+            val splitter = writeStrategy.getSplitter()
             for (i in offset until offset + length) {
                 val byte = buffer[i]
                 outputStream.write(byte)
                 bytesWritten++
-                if (writeStrategy.splitter.update(byte)) {
+                if (splitter.update(byte)) {
                     flushChunk()
                     writeStrategy.reset(ChunkHash.DATA_LEVEL)
                     if (i == offset + length - 1)
@@ -248,6 +249,7 @@ class ChunkContainerOutStream(private val container: ChunkContainer,
             if (offset < 0 || length < 0 || offset + length > buffer.size)
                 throw Exception("Index out of bounds")
 
+            val splitter = writeStrategy.getSplitter()
             for (i in offset until offset + length) {
                 // Prepare to overwrite the next chunk. This needs to be done in each iteration since the previous write
                 // could have triggered a flush.
@@ -256,7 +258,7 @@ class ChunkContainerOutStream(private val container: ChunkContainer,
                 val byte = buffer[i]
                 outputStream.write(byte)
                 bytesWritten++
-                if (writeStrategy.splitter.update(byte)) {
+                if (splitter.update(byte)) {
                     flushChunk()
                     writeStrategy.reset(ChunkHash.DATA_LEVEL)
                 }

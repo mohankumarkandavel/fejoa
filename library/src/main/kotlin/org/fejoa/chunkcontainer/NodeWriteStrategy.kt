@@ -19,7 +19,7 @@ class RepeaterStream(val buffer: ByteArray) : InStream {
 }
 
 interface NodeWriteStrategy {
-    val splitter: ChunkSplitter
+    suspend fun getSplitter(): ChunkSplitter
     fun newInstance(level: Int): NodeWriteStrategy
     fun reset(level: Int)
     /**
@@ -28,7 +28,7 @@ interface NodeWriteStrategy {
      * It is assumed that the data is already processed by the current splitter. It is save to use the current splitter
      * for the normalization.
      */
-    fun finalizeWrite(data: ByteArray): ByteArray
+    suspend fun finalizeWrite(data: ByteArray): ByteArray
 }
 
 /**
@@ -36,17 +36,18 @@ interface NodeWriteStrategy {
  */
 abstract class NodeWriteStrategyBase(val nodeSplitterFactory: NodeSplitterFactory, var level: Int,
                                      val normalizeChunkSize: Boolean) : NodeWriteStrategy {
-    protected var chunkSplitter = nodeSplitterFactory.create(level)
+    private var chunkSplitter: ChunkSplitter? = null
 
-    override val splitter: ChunkSplitter
-        get() = chunkSplitter
+    override suspend fun getSplitter(): ChunkSplitter {
+        return chunkSplitter?.let { it } ?: nodeSplitterFactory.create(level).also { chunkSplitter = it }
+    }
 
     override fun reset(level: Int) {
         if (this.level != level) {
-            chunkSplitter = nodeSplitterFactory.create(level)
+            chunkSplitter = null
             this.level = level
         } else {
-            chunkSplitter.reset()
+            chunkSplitter?.reset()
         }
     }
 }
@@ -59,7 +60,7 @@ class DynamicNodeWriteStrategy(nodeSplitterFactory: NodeSplitterFactory, level: 
         return DynamicNodeWriteStrategy(nodeSplitterFactory, level)
     }
 
-    override fun finalizeWrite(data: ByteArray): ByteArray {
+    override suspend fun finalizeWrite(data: ByteArray): ByteArray {
         // Equalize:
         // For example: assume a node sizeFactor of 2/3 and a node that triggered at byte t:
         // |123t|
@@ -76,6 +77,7 @@ class DynamicNodeWriteStrategy(nodeSplitterFactory: NodeSplitterFactory, level: 
 
         val random = Random()
         // ensure that we trigger
+        val chunkSplitter = getSplitter()
         while (!chunkSplitter.isTriggered) {
             chunkSplitter.write(random.read().toByte())
             outStream.write(repeater.readByte())
@@ -102,7 +104,7 @@ class FixedSizeNodeWriteStrategy(val nodeSize: Int, nodeSplitterFactory: NodeSpl
         return FixedSizeNodeWriteStrategy(nodeSize, nodeSplitterFactory, level, normalizeChunkSize)
     }
 
-    override fun finalizeWrite(data: ByteArray): ByteArray {
+    override suspend fun finalizeWrite(data: ByteArray): ByteArray {
         if (!normalizeChunkSize)
             return data
 
@@ -110,6 +112,7 @@ class FixedSizeNodeWriteStrategy(val nodeSize: Int, nodeSplitterFactory: NodeSpl
         val outStream = ByteArrayOutStream()
         var bytesWritten = outStream.write(data)
         val repeater = RepeaterStream(data)
+        val chunkSplitter = getSplitter()
         // fill remaining space with random bytes till we get the outSize
         while (bytesWritten < nodeSize) {
             chunkSplitter.write(random.read().toByte())

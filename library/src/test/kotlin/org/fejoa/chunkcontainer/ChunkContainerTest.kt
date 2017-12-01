@@ -80,7 +80,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
         val chunkContainer = openContainer(dirName, name, ref)
         val string = toString(ChunkContainerInStream(chunkContainer))
         assertEquals(data, string)
-        val chunkHash = ChunkHash(ref.hash.spec)
+        val chunkHash = ChunkHash.create(ref.hash.spec)
         chunkHash.write(data.toUTF())
         assertEquals(HashValue(chunkHash.hash()), chunkContainer.hash())
     }
@@ -224,7 +224,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
                 return nodeFactory.nodeSizeFactor(level)
             }
 
-            override fun create(level: Int): ChunkSplitter {
+            override suspend fun create(level: Int): ChunkSplitter {
                 if (level == ChunkHash.DATA_LEVEL)
                     return dataSplitter
                 else
@@ -232,7 +232,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
             }
         }
 
-        var chunkHash = ChunkHash(splitterFactory, config.hashSpec.getBaseHashFactory())
+        var chunkHash = ChunkHash.create(splitterFactory, config.hashSpec.getBaseHashFactory())
         chunkHash.write("11".toUTF())
         chunkHash.write("44".toUTF())
         chunkHash.write("22".toUTF())
@@ -243,7 +243,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
         chunkContainer.clear()
         chunkContainer.append(DataChunk("11".toUTF()))
         chunkContainer.flush(false)
-        chunkHash = ChunkHash(config.hashSpec)
+        chunkHash = ChunkHash.create(config.hashSpec)
         chunkHash.write("11".toUTF())
         assertEquals(chunkContainer.hash(), HashValue(chunkHash.hash()))
     }
@@ -300,30 +300,32 @@ class ChunkContainerTest : ChunkContainerTestBase() {
                 return nodeFactory.nodeSizeFactor(level)
             }
 
-            override fun create(level: Int): ChunkSplitter {
+            override suspend fun create(level: Int): ChunkSplitter {
                 if (level == ChunkHash.DATA_LEVEL)
                     return dataSplitter
                 else
                     return nodeFactory.create(level)
             }
         }
-        val chunkHash = ChunkHash(splitterFactory, config.hashSpec.getBaseHashFactory())
+        val chunkHash = ChunkHash.create(splitterFactory, config.hashSpec.getBaseHashFactory())
         chunkHash.write(newString.toUTF())
         assertTrue(chunkContainer.hash().bytes contentEquals chunkHash.hash())
     }
 
-    class DataWriteStrategy(dataSplitter: ChunkSplitter) : NodeWriteStrategy {
-        override val splitter: ChunkSplitter = dataSplitter
+    class DataWriteStrategy(val dataSplitter: ChunkSplitter) : NodeWriteStrategy {
+        override suspend fun getSplitter(): ChunkSplitter {
+            return dataSplitter
+        }
 
         override fun newInstance(level: Int): NodeWriteStrategy {
-            return DataWriteStrategy(splitter)
+            return DataWriteStrategy(dataSplitter)
         }
 
         override fun reset(level: Int) {
-            splitter.reset()
+            dataSplitter.reset()
         }
 
-        override fun finalizeWrite(data: ByteArray): ByteArray {
+        override suspend fun finalizeWrite(data: ByteArray): ByteArray {
             return data
         }
     }
@@ -469,14 +471,14 @@ class ChunkContainerTest : ChunkContainerTestBase() {
         outputStream.write(data)
         outputStream.close()
 
-        var chunkHash = ChunkHash(config.hashSpec)
+        var chunkHash = ChunkHash.create(config.hashSpec)
         chunkHash.write(data)
         val dataHash = HashValue(chunkHash.hash())
 
         // verify
         chunkContainer = openContainer(dirName, name, chunkContainer.ref)
         val iter = chunkContainer.getChunkIterator(0)
-        chunkHash = ChunkHash(config.hashSpec)
+        chunkHash = ChunkHash.create(config.hashSpec)
         while (iter.hasNext()) {
             val pointer = iter.next()
             chunkHash.write(pointer.getDataChunk().getData())
@@ -548,7 +550,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
     suspend private fun validateContent(expected: ByteArray, chunkContainer: ChunkContainer) {
         assertTrue(expected contentEquals ChunkContainerInStream(chunkContainer).readAll())
 
-        var chunkHash = ChunkHash(chunkContainer.ref.hash.spec)
+        var chunkHash = ChunkHash.create(chunkContainer.ref.hash.spec)
         chunkHash.write(expected)
 
         assertTrue(chunkContainer.hash().bytes contentEquals chunkHash.hash())

@@ -2,6 +2,7 @@ package org.fejoa.chunkcontainer
 
 import org.fejoa.protocolbufferlight.ProtocolBufferLight
 import org.fejoa.storage.ChunkSplitter
+import org.fejoa.storage.CyclicPolySplitter
 import org.fejoa.storage.RabinSplitter
 import org.fejoa.support.ByteArrayInStream
 import org.fejoa.support.ByteArrayOutStream
@@ -13,7 +14,9 @@ abstract class DynamicChunkingConfig : ChunkingConfig {
         MIN_CHUNK_SIZE(1),
         MAX_CHUNK_SIZE(2),
         WINDOW_SIZE(3),
-        NEXT_TAG_FOR_DERIVED_CLASSES(4)
+
+        // Cyclic polynomial config
+        SEED(5)
     }
 
     protected var defaultConfig: DynamicChunkingConfig? = null
@@ -32,7 +35,7 @@ abstract class DynamicChunkingConfig : ChunkingConfig {
         return outputStream.toByteArray()
     }
 
-    protected fun write(buffer: ProtocolBufferLight) {
+    open protected fun write(buffer: ProtocolBufferLight) {
         if (targetSize != defaultConfig!!.targetSize)
             buffer.put(DynamicChunkingDetailTag.TARGET_CHUNK_SIZE.value, targetSize)
         if (minSize != defaultConfig!!.minSize)
@@ -43,7 +46,7 @@ abstract class DynamicChunkingConfig : ChunkingConfig {
             buffer.put(DynamicChunkingDetailTag.WINDOW_SIZE.value, windowSize)
     }
 
-    protected fun read(buffer: ProtocolBufferLight) {
+    open protected fun read(buffer: ProtocolBufferLight) {
         var value = buffer.getLong(DynamicChunkingDetailTag.TARGET_CHUNK_SIZE.value)
         if (value != null)
             targetSize = value.toInt()
@@ -139,12 +142,76 @@ class RabinChunkingConfig : DynamicChunkingConfig {
                         minSize: Int, maxSize: Int, windowSize: Int)
              : super(type, defaultConfig, targetSize, minSize, maxSize, windowSize)
 
-    override fun getSplitter(factor: Float): ChunkSplitter {
+    override suspend fun getSplitter(factor: Float): ChunkSplitter {
         return RabinSplitter((factor * targetSize).toInt(), (factor * minSize).toInt(), (factor * maxSize).toInt(),
                 windowSize)
     }
 
     override fun clone(): ChunkingConfig {
         return RabinChunkingConfig(chunkingType, defaultConfig, targetSize, minSize, maxSize, windowSize)
+    }
+}
+
+class CyclicPolyChunkingConfig : DynamicChunkingConfig {
+    companion object {
+        fun read(type: HashSpec.HashType, custom: Boolean, extra: ByteArray): CyclicPolyChunkingConfig {
+            val config = CyclicPolyChunkingConfig.create(type)
+            if (!custom)
+                return config
+
+            val buffer = ProtocolBufferLight()
+            buffer.read(ByteArrayInStream(extra))
+            config.read(buffer)
+            return config
+        }
+
+        fun create(type: HashSpec.HashType): CyclicPolyChunkingConfig {
+            val config = getDefault(type)
+            config.defaultConfig = getDefault(type)
+            return config
+        }
+
+        private fun getDefault(type: HashSpec.HashType): CyclicPolyChunkingConfig {
+            val windowSize = 48
+            return when (type) {
+                HashSpec.HashType.FEJOA_CYCLIC_POLY_2KB_8KB -> {
+                    CyclicPolyChunkingConfig(type, 8 * 1024, 2 * 1024,
+                            Int.MAX_VALUE / 2, windowSize)
+                }
+                else -> throw Exception("Unknown chunking type")
+            }
+        }
+    }
+
+    var seed = ByteArray(0)
+
+    private constructor(type: HashSpec.HashType, targetSize: Int, minSize: Int, maxSize: Int, windowSize: Int)
+            : this(type, null, targetSize, minSize, maxSize, windowSize)
+
+    private constructor(type: HashSpec.HashType, defaultConfig: DynamicChunkingConfig?, targetSize: Int,
+                        minSize: Int, maxSize: Int, windowSize: Int)
+            : super(type, defaultConfig, targetSize, minSize, maxSize, windowSize)
+
+    override fun write(buffer: ProtocolBufferLight) {
+        super.write(buffer)
+
+        buffer.put(DynamicChunkingDetailTag.SEED.value, seed)
+    }
+
+    override fun read(buffer: ProtocolBufferLight) {
+        super.read(buffer)
+
+        buffer.getBytes(DynamicChunkingDetailTag.SEED.value)?.also { seed = it}
+    }
+
+    override suspend fun getSplitter(factor: Float): ChunkSplitter {
+        return CyclicPolySplitter.create(seed, (factor * targetSize).toInt(), (factor * minSize).toInt(),
+                (factor * maxSize).toInt(), windowSize)
+    }
+
+    override fun clone(): ChunkingConfig {
+        val clone = CyclicPolyChunkingConfig(chunkingType, defaultConfig, targetSize, minSize, maxSize, windowSize)
+        clone.seed = seed.copyOf()
+        return clone
     }
 }

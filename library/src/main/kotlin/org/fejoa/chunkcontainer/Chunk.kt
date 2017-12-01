@@ -10,6 +10,6 @@ interface Chunk {
     suspend fun hash(hashOutStream: AsyncHashOutStream): HashValue
     suspend fun read(inputStream: InStream, dataLength: Long)
 
-    fun getData(): ByteArray
+    suspend fun getData(): ByteArray
     fun getDataLength(): Long
 }

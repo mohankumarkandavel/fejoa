@@ -27,8 +27,7 @@ class ChunkHashTest {
     @Test
     fun testSimple() = runBlocking {
         val messagehash = factory.create()
-        val chunkHash = ChunkHash(FixedBlockSplitter(2), FixedBlockSplitter(65), FixedBlockSplitter(65),
-                factory)
+        val chunkHash = ChunkHash(FixedBlockSplitter(2), FixedBlockSplitter(65), factory)
 
         val block1 = "11".toUTF()
         messagehash.write(block1)
@@ -170,10 +169,11 @@ class ChunkHashTest {
                 val chunkSize = chunkSizeTarget.size
                 println("Target Chunk Size: " + chunkSize)
                 var prevHash: ByteArray? = null
-                val nodeSplitter = RabinSplitter((kFactor * chunkSize).toInt(), (kFactor * chunkSizeTarget.minSize).toInt(),
+                val nodeSplitter = RabinSplitter((kFactor * chunkSize).toInt(),
+                        (kFactor * chunkSizeTarget.minSize).toInt(),
                         (kFactor * maxSize).toInt())
                 val chunkHash = ChunkHash(RabinSplitter(chunkSize, chunkSizeTarget.minSize, maxSize), nodeSplitter,
-                        nodeSplitter, factory)
+                        factory)
                 //ChunkHash chunkHash = new ChunkHash(new FixedBlockSplitter(1024 * 8), new FixedBlockSplitter(1024 * 8));
 
                 val chunkHashTimes = result.chunkHashTimes[sizeIndex]

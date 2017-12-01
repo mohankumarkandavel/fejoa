@@ -50,7 +50,7 @@ class Hash(val spec: HashSpec, var value: HashValue) {
  * {Hash Type info (optional)}
  */
 class HashSpec(chunkingConfig: ChunkingConfig) {
-    constructor() : this(RabinChunkingConfig.create(DEFAULT))
+    constructor() : this(DEFAULT)
     constructor(type: HashType) : this(getDefaultChunkingConfig(type))
 
     fun clone(): HashSpec {
@@ -64,7 +64,8 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
         FEJOA_FIXED_8K(CC_HASH_OFFSET + 2),
         FEJOA_RABIN_CUSTOM((CC_HASH_OFFSET + 11) or CUSTOM_HASH_MASK),
         FEJOA_RABIN_2KB_8KB(CC_HASH_OFFSET + 12),
-        FEJOA_RABIN_2KB_8KB_COMPACT(FEJOA_RABIN_2KB_8KB.value or COMPACT_MASK)
+        FEJOA_RABIN_2KB_8KB_COMPACT(FEJOA_RABIN_2KB_8KB.value or COMPACT_MASK),
+        FEJOA_CYCLIC_POLY_2KB_8KB(CC_HASH_OFFSET + 32),
     }
 
     var chunkingConfig: ChunkingConfig = chunkingConfig
@@ -75,7 +76,7 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
         get() = chunkingConfig.chunkingType
 
     companion object {
-        val DEFAULT = FEJOA_RABIN_2KB_8KB
+        val DEFAULT = FEJOA_CYCLIC_POLY_2KB_8KB
 
         val COMPACT_MASK = 1 shl 6
         val CUSTOM_HASH_MASK = 1 shl 7
@@ -102,6 +103,7 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
                 FEJOA_RABIN_CUSTOM -> throw Exception("Not allowed")
                 FEJOA_RABIN_2KB_8KB,
                 FEJOA_RABIN_2KB_8KB_COMPACT -> RabinChunkingConfig.create(type)
+                FEJOA_CYCLIC_POLY_2KB_8KB -> CyclicPolyChunkingConfig.create(type)
             }
         }
 
@@ -114,6 +116,7 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
                 FEJOA_RABIN_CUSTOM,
                 FEJOA_RABIN_2KB_8KB,
                 FEJOA_RABIN_2KB_8KB_COMPACT -> RabinChunkingConfig.read(type, custom, extra)
+                FEJOA_CYCLIC_POLY_2KB_8KB -> CyclicPolyChunkingConfig.read(type, custom, extra)
             }
         }
     }
@@ -126,14 +129,15 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
         return bytesWritten
     }
 
-    fun getHashOutStream(): AsyncHashOutStream {
+    suspend fun getHashOutStream(): AsyncHashOutStream {
         return when(this.type) {
             SHA_256 -> SHA256Factory().create()
             FEJOA_FIXED_CUSTOM,
             FEJOA_FIXED_8K,
             FEJOA_RABIN_CUSTOM,
             FEJOA_RABIN_2KB_8KB,
-            FEJOA_RABIN_2KB_8KB_COMPACT-> ChunkHash(this)
+            FEJOA_RABIN_2KB_8KB_COMPACT,
+            FEJOA_CYCLIC_POLY_2KB_8KB -> ChunkHash.create(this)
         }
     }
 
@@ -143,7 +147,8 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
         FEJOA_FIXED_8K,
         FEJOA_RABIN_CUSTOM,
         FEJOA_RABIN_2KB_8KB,
-        FEJOA_RABIN_2KB_8KB_COMPACT-> object : HashOutStreamFactory {
+        FEJOA_RABIN_2KB_8KB_COMPACT,
+        FEJOA_CYCLIC_POLY_2KB_8KB -> object : HashOutStreamFactory {
             override fun create(): AsyncHashOutStream = CryptoHelper.sha256Hash()
         }
     }
@@ -165,7 +170,7 @@ class HashSpec(chunkingConfig: ChunkingConfig) {
             }
         }
 
-        override fun create(level: Int): ChunkSplitter {
+        override suspend fun create(level: Int): ChunkSplitter {
             return config.getSplitter(nodeSizeFactor(level))
         }
     }
