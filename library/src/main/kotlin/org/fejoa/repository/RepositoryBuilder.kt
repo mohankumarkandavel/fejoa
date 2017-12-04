@@ -8,8 +8,6 @@ import org.fejoa.support.*
 
 
 object RepositoryBuilder {
-    private val REPOSITORY_REF = 0
-
     fun getPlainBranchLogIO(): BranchLogIO = object: BranchLogIO {
         suspend override fun writeToLog(repoRef: RepositoryRef): String {
             val buffer = commitPointerToLog(repoRef)
@@ -24,19 +22,13 @@ object RepositoryBuilder {
 
     suspend private fun commitPointerToLog(repoRef: RepositoryRef): ByteArray {
         val buffer = ProtocolBufferLight()
-        var outputStream = AsyncByteArrayOutStream()
-        repoRef.write(outputStream)
-        buffer.put(REPOSITORY_REF, outputStream.toByteArray())
-
+        repoRef.write(buffer)
         return buffer.toByteArray()
     }
 
     suspend private fun commitPointerFromLog(bytes: ByteArray): RepositoryRef {
         val buffer = ProtocolBufferLight(bytes)
-
-        val dataBytes = buffer.getBytes(REPOSITORY_REF) ?: throw IOException("Missing data part")
-        val ref = RepositoryRef.read(ByteArrayInStream(dataBytes).toAsyncInputStream())
-        return ref
+        return RepositoryRef.read(buffer)
     }
 
     private val TAG_IV = 0

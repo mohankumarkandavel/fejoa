@@ -1,41 +1,108 @@
 package org.fejoa.repository
 
+import kotlinx.serialization.SerialId
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.protobuf.ProtoBuf
 import org.fejoa.chunkcontainer.*
-import org.fejoa.crypto.CryptoSettings
-import org.fejoa.crypto.SecretKey
+import org.fejoa.crypto.SymCredentials
+import org.fejoa.protocolbufferlight.ProtocolBufferLight
 import org.fejoa.storage.*
 import org.fejoa.support.*
 
 
-class CryptoConfig(val secretKey: SecretKey, val symmetric: CryptoSettings.Symmetric)
-
-// TODO remove crypto config?
 class RepositoryConfig(val hashSpec: HashSpec,
                        val boxSpec: BoxSpec = BoxSpec(),
-                       val revLog: RevLog = RevLog(),
-                       val crypto: CryptoConfig? = null) {
-
-    class RevLog(val maxRevEntrySize: Long = 4 * 1024 * 1024)
-
+                       val revLog: RevLogConfig = RevLogConfig()) {
     val containerSpec: ContainerSpec
         get() = ContainerSpec(hashSpec.createChild(), boxSpec)
-}
 
-
-// TODO: include revlog settings?
-class RepositoryRef(val objectIndexRef: ChunkContainerRef, val head: Hash) {
     companion object {
-        suspend fun read(inStream: AsyncInStream): RepositoryRef {
-            val objectIndexRef = ChunkContainerRef.read(inStream, null)
-            val head = Hash.read(inStream, objectIndexRef.hash.spec)
-            return RepositoryRef(objectIndexRef, head)
+        val HASH_SPEC_TAG = 0
+        val BOX_SPEC_TAG = 1
+        val REV_LOG_TAG = 2
+
+        /**
+         * @param default if hashSpec or boxSpec are not included in the buffer these values are taken from default
+         */
+        suspend fun read(protoBuffer: ProtocolBufferLight, default: ChunkContainerRef): RepositoryConfig {
+            val hashSpec = protoBuffer.getBytes(HASH_SPEC_TAG)?.let {
+                return@let HashSpec.read(ByteArrayInStream(it).toAsyncInputStream(), null)
+            } ?: default.hash.spec
+
+            val boxSpec = protoBuffer.getBytes(BOX_SPEC_TAG)?.let {
+                return@let BoxSpec.read(ByteArrayInStream(it).toAsyncInputStream())
+            } ?: default.boxSpec
+
+            val revLog = protoBuffer.getBytes(REV_LOG_TAG)?.let {
+                return@let ProtoBuf.load<RevLogConfig>(it)
+            } ?: throw Exception("Rev log config expected")
+
+            return RepositoryConfig(hashSpec, boxSpec, revLog)
         }
     }
 
-    suspend fun write(outStream: AsyncOutStream) {
-        objectIndexRef.write(outStream)
-        head.write(outStream)
+    /**
+     * @param default hashSpec and boxSpec are only written if they are different from the parameters in default
+     */
+    suspend fun write(protoBuffer: ProtocolBufferLight, default: ChunkContainerRef) {
+        var outStream = AsyncByteArrayOutStream()
+        if (default.hash.spec != hashSpec) {
+            hashSpec.write(outStream)
+            protoBuffer.put(HASH_SPEC_TAG, outStream.toByteArray())
+        }
+        if (default.boxSpec != boxSpec) {
+            outStream = AsyncByteArrayOutStream()
+            boxSpec.write(outStream)
+            protoBuffer.put(BOX_SPEC_TAG, outStream.toByteArray())
+        }
+
+        protoBuffer.put(REV_LOG_TAG, ProtoBuf.dump(revLog))
     }
+}
+
+
+@Serializable
+class RevLogConfig(@SerialId(0) val maxEntrySize: Long = 4 * 1024 * 1024)
+
+class RepositoryRef(val objectIndexRef: ChunkContainerRef, val head: Hash, val config: RepositoryConfig) {
+    companion object {
+        val OBJECT_INDEX_REF_TAG = 0
+        val HEAD_TAG = 1
+        val CONFIG_TAG = 2
+
+        suspend fun read(protoBuffer: ProtocolBufferLight): RepositoryRef {
+            val objectIndexRef = protoBuffer.getBytes(OBJECT_INDEX_REF_TAG)?.let {
+                return@let ChunkContainerRef.read(ByteArrayInStream(it).toAsyncInputStream(), null)
+            } ?: throw Exception("Missing object index ref")
+
+            val head = protoBuffer.getBytes(HEAD_TAG)?.let {
+                return@let Hash.read(ByteArrayInStream(it).toAsyncInputStream(), null)
+            } ?: throw Exception("Missing repo head")
+
+            val config = protoBuffer.getBytes(CONFIG_TAG)?.let {
+                val configBuffer = ProtocolBufferLight(it)
+                return@let RepositoryConfig.read(configBuffer, objectIndexRef)
+            } ?: throw Exception("Missing repo config")
+
+            return RepositoryRef(objectIndexRef, head, config)
+        }
+    }
+
+    suspend fun write(protoBuffer: ProtocolBufferLight) {
+        var outStream = AsyncByteArrayOutStream()
+        objectIndexRef.write(outStream)
+        protoBuffer.put(OBJECT_INDEX_REF_TAG, outStream.toByteArray())
+
+        outStream = AsyncByteArrayOutStream()
+        head.write(outStream)
+        protoBuffer.put(HEAD_TAG, outStream.toByteArray())
+
+        val configBuffer = ProtocolBufferLight()
+        config.write(configBuffer, objectIndexRef)
+        protoBuffer.put(CONFIG_TAG, configBuffer.toByteArray())
+    }
+
+
 }
 
 
@@ -45,7 +112,8 @@ class Repository private constructor(private val branch: String,
                                      transaction: ChunkAccessors.Transaction,
                                      val log: BranchLog,
                                      val objectIndex: ObjectIndex,
-                                     val config: RepositoryConfig): Database {
+                                     val config: RepositoryConfig,
+                                     val crypto: SymCredentials?): Database {
     private var transaction: LogRepoTransaction = LogRepoTransaction(transaction)
     private var headCommit: Commit? = null
     val commitCache = CommitCache(this)
@@ -54,37 +122,39 @@ class Repository private constructor(private val branch: String,
     val branchLogIO: BranchLogIO
 
     init {
-        if (config.crypto != null)
-            branchLogIO = RepositoryBuilder.getEncryptedBranchLogIO(config.crypto.secretKey, config.crypto.symmetric)
+        if (crypto != null)
+            branchLogIO = RepositoryBuilder.getEncryptedBranchLogIO(crypto.secretKey, crypto.symmetric)
         else
             branchLogIO = RepositoryBuilder.getPlainBranchLogIO()
     }
 
     companion object {
-        fun create(branch: String, branchBackend: StorageBackend.BranchBackend, config: RepositoryConfig): Repository {
+        fun create(branch: String, branchBackend: StorageBackend.BranchBackend, config: RepositoryConfig,
+                   crypto: SymCredentials?): Repository {
             val containerSpec = config.containerSpec
-            val accessors: ChunkAccessors = RepoChunkAccessors(branchBackend.getChunkStorage(), config)
+            val accessors: ChunkAccessors = RepoChunkAccessors(branchBackend.getChunkStorage(), config, crypto)
             val log: BranchLog = branchBackend.getBranchLog()
             val transaction = accessors.startTransaction()
             val objectIndexCC = ChunkContainer.create(transaction.getObjectIndexAccessor(containerSpec),
                     containerSpec)
             val objectIndex = ObjectIndex.create(config, objectIndexCC)
-            return Repository(branch, branchBackend, accessors, transaction, log, objectIndex, config)
+            return Repository(branch, branchBackend, accessors, transaction, log, objectIndex, config, crypto)
         }
 
         suspend fun open(branch: String, ref: RepositoryRef, branchBackend: StorageBackend.BranchBackend,
-                         crypto: CryptoConfig?): Repository {
-            val repoConfig = RepositoryConfig(ref.objectIndexRef.hash.spec, ref.objectIndexRef.boxSpec, crypto = crypto)
+                         crypto: SymCredentials?): Repository {
+            val repoConfig = RepositoryConfig(ref.objectIndexRef.hash.spec, ref.objectIndexRef.boxSpec)
 
             val containerSpec = repoConfig.containerSpec
-            val accessors: ChunkAccessors = RepoChunkAccessors(branchBackend.getChunkStorage(), repoConfig)
+            val accessors: ChunkAccessors = RepoChunkAccessors(branchBackend.getChunkStorage(), repoConfig, crypto)
             val log: BranchLog = branchBackend.getBranchLog()
             val transaction = accessors.startTransaction()
             val objectIndexCC = ChunkContainer.read(transaction.getObjectIndexAccessor(containerSpec),
                     ref.objectIndexRef)
             val objectIndex = ObjectIndex.open(repoConfig, objectIndexCC)
 
-            val repository = Repository(branch, branchBackend, accessors, transaction, log, objectIndex, repoConfig)
+            val repository = Repository(branch, branchBackend, accessors, transaction, log, objectIndex, repoConfig,
+                    crypto)
             repository.setHeadCommit(ref.head)
             return repository
         }
@@ -266,7 +336,7 @@ class Repository private constructor(private val branch: String,
         headCommit = commit
 
         val objectIndexRef =  objectIndex.flush()
-        val repoRef = RepositoryRef(objectIndexRef, commit.getHash())
+        val repoRef = RepositoryRef(objectIndexRef, commit.getHash(), config)
         transaction.finishTransaction()
         log.add(branchLogIO.logHash(repoRef), branchLogIO.writeToLog(repoRef), transaction.getObjectsWritten())
         transaction = LogRepoTransaction(accessors.startTransaction())
@@ -276,7 +346,7 @@ class Repository private constructor(private val branch: String,
     }
 
     suspend fun getRepositoryRef(): RepositoryRef {
-        return RepositoryRef(objectIndex.chunkContainer.ref, getHead())
+        return RepositoryRef(objectIndex.chunkContainer.ref, getHead(), config)
     }
 
     suspend private fun writeTree(tree: Directory): Hash {

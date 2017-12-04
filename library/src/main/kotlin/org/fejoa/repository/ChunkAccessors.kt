@@ -3,6 +3,7 @@ package org.fejoa.repository
 import org.fejoa.chunkcontainer.BoxSpec
 import org.fejoa.chunkcontainer.ContainerSpec
 import org.fejoa.crypto.CryptoHelper
+import org.fejoa.crypto.SymCredentials
 import org.fejoa.storage.*
 import org.fejoa.support.Future
 
@@ -45,7 +46,8 @@ interface ChunkAccessors {
 }
 
 
-class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryConfig)
+class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryConfig,
+                         val crypto: SymCredentials?)
     : ChunkAccessors {
 
     override fun startTransaction(): ChunkAccessors.Transaction {
@@ -56,7 +58,7 @@ class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryCo
                 return when (repoConfig.boxSpec.encInfo.type) {
                     BoxSpec.EncryptionInfo.Type.PLAIN -> accessor
                     BoxSpec.EncryptionInfo.Type.PARENT -> {
-                        val cryptoConfig = repoConfig.crypto ?: throw Exception("Missing crypto data")
+                        val cryptoConfig = crypto ?: throw Exception("Missing crypto data")
                         accessor.encrypted(CryptoHelper.crypto, cryptoConfig.secretKey, cryptoConfig.symmetric)
                     }
                 }

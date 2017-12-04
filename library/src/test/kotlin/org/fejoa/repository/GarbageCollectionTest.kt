@@ -1,6 +1,7 @@
 package org.fejoa.repository
 
 import kotlinx.coroutines.experimental.runBlocking
+import org.fejoa.crypto.SymCredentials
 import org.fejoa.support.await
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -37,7 +38,7 @@ class GarbageCollectionTest : RepositoryTestBase() {
         target.log.add(repository.log.getHead().await()!!)
         // re-open to use the correct object index
         target = Repository.open(target.getBranch(), repository.getRepositoryRef(), target.branchBackend,
-                target.config.crypto)
+                SymCredentials(secretKey!!, settings.symmetric))
         testRepo.verify(target)
     }
 }

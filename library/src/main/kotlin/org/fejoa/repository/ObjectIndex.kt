@@ -493,7 +493,7 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
         if (entryRefList.entries.firstOrNull { it.has(hash) } != null)
             return hash
 
-        if (entryRefList.entries.size == 0 || chunkContainer.size() > config.revLog.maxRevEntrySize) {
+        if (entryRefList.entries.size == 0 || chunkContainer.size() > config.revLog.maxEntrySize) {
             // add as a chunk container
             entryRefList.push(ChunkContainerEntryRef(chunkContainer.ref))
             entries.update(id, entryRefList)
@@ -505,7 +505,7 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
         val entryRef = entryRefList.entries[0]
         val base = getChunkContainer(entryRef, entryRef.getHashes()[0])
                 ?: throw Exception("Expected to load ChunkContainer")
-        if (base.size() > config.revLog.maxRevEntrySize) {
+        if (base.size() > config.revLog.maxEntrySize) {
             // don't diff just add as a chunk container
             entryRefList.push(ChunkContainerEntryRef(chunkContainer.ref))
             entries.update(id, entryRefList)

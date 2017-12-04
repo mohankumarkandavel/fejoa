@@ -1,6 +1,7 @@
 package org.fejoa.repository
 
 import org.fejoa.chunkcontainer.*
+import org.fejoa.crypto.SymCredentials
 import org.fejoa.storage.KeepOursUnchanged
 import org.fejoa.support.PathUtils
 import org.fejoa.support.toUTF
@@ -43,7 +44,7 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
 
     suspend protected fun createRepo(dirName: String, branch: String): Repository {
         val storage = prepareStorage(dirName, branch)
-        return Repository.create(branch, storage, getRepoConfig())
+        return Repository.create(branch, storage, getRepoConfig(),  SymCredentials(secretKey!!, settings.symmetric))
     }
 
     internal class TestBlob(val content: String)
@@ -73,7 +74,7 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
 
         suspend fun clone(): TestRepository {
             val clone = TestRepository(Repository.open(repository.getBranch(), repository.getRepositoryRef(),
-                    repository.branchBackend, repository.config.crypto), head)
+                    repository.branchBackend, repository.crypto), head)
             clone.head?.let {
                 clone.repository.setHeadCommit(it.hash)
             }

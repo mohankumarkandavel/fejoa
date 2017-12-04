@@ -61,13 +61,12 @@ open class ChunkContainerTestBase {
 
         return RepositoryConfig(
                 hashSpec = hashSpec,
-                boxSpec = boxSpec,
-                crypto = CryptoConfig(secretKey!!, settings.symmetric)
+                boxSpec = boxSpec
         )
     }
 
     protected fun ChunkStorage.prepareAccessors(): ChunkAccessors {
-        return RepoChunkAccessors(this, getRepoConfig())
+        return RepoChunkAccessors(this, getRepoConfig(), SymCredentials(secretKey!!, settings.symmetric))
     }
 
     suspend protected fun prepareContainer(storage: StorageBackend.BranchBackend, config: ContainerSpec)

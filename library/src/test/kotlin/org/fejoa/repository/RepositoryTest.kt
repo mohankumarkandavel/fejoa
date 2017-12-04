@@ -5,6 +5,7 @@ import kotlinx.coroutines.experimental.runBlocking
 import org.fejoa.chunkcontainer.*
 import org.fejoa.crypto.CryptoHelper
 import org.fejoa.crypto.CryptoSettings
+import org.fejoa.crypto.SymCredentials
 import org.fejoa.storage.*
 import org.fejoa.support.*
 import kotlin.test.Test
@@ -61,7 +62,8 @@ class RepositoryTest : RepositoryTestBase() {
         val repoConfig = getRepoConfig()
         repoConfig.hashSpec.setFixedSizeChunking(500)
 
-        var repository = Repository.create(branch, storage, repoConfig)
+        var repository = Repository.create(branch, storage, repoConfig,
+                SymCredentials(secretKey!!, settings.symmetric))
 
         repository.putBytes("test", "test".toUTF())
         assertTrue(repository.readBytes("test") contentEquals "test".toUTF())
@@ -69,7 +71,7 @@ class RepositoryTest : RepositoryTestBase() {
 
         assertTrue(repository.readBytes("test") contentEquals "test".toUTF())
 
-        repository = Repository.open(branch, repository.getRepositoryRef(), storage, repoConfig.crypto)
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, repository.crypto)
         assertTrue(repository.readBytes("test") contentEquals "test".toUTF())
     }
 
@@ -81,6 +83,7 @@ class RepositoryTest : RepositoryTestBase() {
         var repository = createRepo(dirName, branch)
         val storage = repository.branchBackend
         val repoConfig = repository.config
+        val symCredentials = SymCredentials(secretKey!!, settings.symmetric)
 
         val content = HashMap<String, DatabaseStringEntry>()
         add(repository, content, DatabaseStringEntry("file1", "file1"))
@@ -95,13 +98,15 @@ class RepositoryTest : RepositoryTestBase() {
         val tip = repository.getHead()
         assertEquals(tip, repository.getHeadCommit()!!.getHash())
 
-        repository = Repository.open(branch, repository.getRepositoryRef(), storage, repoConfig.crypto)
+
+
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, symCredentials)
         containsContent(repository, content)
 
         // test add to existing dir
         add(repository, content, DatabaseStringEntry("dir1/file6", "file6"))
         repository.commit(ByteArray(0), simpleCommitSignature)
-        repository = Repository.open(branch, repository.getRepositoryRef(), storage, repoConfig.crypto)
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, symCredentials)
         containsContent(repository, content)
 
         // test update
@@ -109,13 +114,13 @@ class RepositoryTest : RepositoryTestBase() {
         add(repository, content, DatabaseStringEntry("dir1/sub1/file5", "file5Update"))
         add(repository, content, DatabaseStringEntry("dir1/sub1/sub2/file6", "file6Update"))
         repository.commit(ByteArray(0), simpleCommitSignature)
-        repository = Repository.open(branch, repository.getRepositoryRef(), storage, repoConfig.crypto)
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, symCredentials)
         containsContent(repository, content)
 
         // test remove
         remove(repository, content, "dir1/sub1/file5")
         repository.commit(ByteArray(0), simpleCommitSignature)
-        repository = Repository.open(branch, repository.getRepositoryRef(), storage, repoConfig.crypto)
+        repository = Repository.open(branch, repository.getRepositoryRef(), storage, symCredentials)
         containsContent(repository, content)
 
         assertEquals(0, repository.listFiles("notThere").size)

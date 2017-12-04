@@ -7,7 +7,7 @@ import org.fejoa.support.*
 
 val MOST_SIGNIFICANT_BIT = 1 shl 7
 
-class BoxSpec(val encInfo: EncryptionInfo = EncryptionInfo(),
+data class BoxSpec(val encInfo: EncryptionInfo = EncryptionInfo(),
               val zipType: ZipType = ZipType.DEFLATE, val zipBeforeEnc: Boolean = true,
               val nodeNormalization: Boolean = false,
               val dataNormalization: Boolean = false) {
@@ -20,7 +20,7 @@ class BoxSpec(val encInfo: EncryptionInfo = EncryptionInfo(),
      * |! EncType  (1|      -> bitfield: |extension [1| reserved [4|enc type [3|
      * {enc data}
      */
-    class EncryptionInfo(val type: EncryptionInfo.Type, val data: ByteArray) {
+    data class EncryptionInfo(val type: EncryptionInfo.Type, val data: ByteArray) {
         constructor() : this(Type.PARENT, ByteArray(0))
         constructor(type: EncryptionInfo.Type) : this(type, ByteArray(0))
 
