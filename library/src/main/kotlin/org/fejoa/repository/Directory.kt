@@ -78,10 +78,8 @@ abstract class DirectoryEntry(val entryType: EntryType, val nameAttrData: NameAt
 }
 
 
-class Directory(nameAttrData: NameAttrData, hash: Hash = Hash(HashSpec(HashSpec.DEFAULT),
-        Config.newDataHash())) : DirectoryEntry(DIR, nameAttrData, hash) {
-
-    constructor(name: String) : this(NameAttrData(name))
+class Directory(nameAttrData: NameAttrData, hash: Hash) : DirectoryEntry(DIR, nameAttrData, hash) {
+    constructor(name: String, parent: HashSpec) : this(NameAttrData(name), Hash.createChild(parent))
 
     private val children: MutableList<DirectoryEntry> = ArrayList()
 
@@ -97,42 +95,46 @@ class Directory(nameAttrData: NameAttrData, hash: Hash = Hash(HashSpec(HashSpec.
         suspend fun readRoot(hash: Hash, objectIndex: ObjectIndex): Directory {
             val container = objectIndex.getDirChunkContainer(hash)
                     ?: throw Exception("Can't find dir ${hash.value}")
-            return readRoot(ChunkContainerInStream(container))
+            val root = readRoot(ChunkContainerInStream(container), hash.spec.createChild())
+            if (hash.value != root.hash())
+                throw Exception("Unexpected directory hash")
+            return root
         }
 
-        suspend private fun readRoot(inStream: AsyncInStream): Directory {
+        suspend private fun readRoot(inStream: AsyncInStream, parent: HashSpec): Directory {
             val type = inStream.readByte().toInt()
             if (type != DirType.FLAT_DIR.value)
                 throw Exception("Unsupported directory type: $type")
 
-            val dir = Directory(NameAttrData(""))
-            readChildren(dir, inStream)
+            val dir = Directory(NameAttrData(""), Hash.createChild(parent))
+            readChildren(dir, inStream, parent)
             return dir
         }
 
-        suspend private fun readChildren(parent: Directory, inStream: AsyncInStream) {
+        suspend private fun readChildren(parent: Directory, inStream: AsyncInStream, parentSpec: HashSpec) {
             while (true) {
                 val typeValue = inStream.readByte().toInt()
                 val type = values().firstOrNull { it.value == typeValue }
                         ?: throw IOException("Unknown dir entry type: $typeValue")
                 if (type == LAST_DIR_ENTRY)
                     break
-                parent.children.add(readSingleEntry(type, inStream))
+                parent.children.add(readSingleEntry(type, inStream, parentSpec))
             }
         }
 
-        suspend private fun readSingleEntry(type: EntryType, inStream: AsyncInStream): DirectoryEntry {
+        suspend private fun readSingleEntry(type: EntryType, inStream: AsyncInStream, parent: HashSpec)
+                : DirectoryEntry {
             return when (type) {
                 LAST_DIR_ENTRY -> throw Exception("Should't not happen")
                 EMPTY_DIR,
                 DIR -> {
                     val nameAttrData = NameAttrData.read(inStream)
-                    val dir = Directory(nameAttrData)
+                    val dir = Directory(nameAttrData, Hash.createChild(parent))
                     if (type != EMPTY_DIR)
-                        readChildren(dir, inStream)
+                        readChildren(dir, inStream, parent)
                     dir
                 }
-                BLOB -> BlobEntry.read(inStream)
+                BLOB -> BlobEntry.read(inStream, parent)
                 SYMBOLIC_LINK,
                 HARD_LINK -> TODO()
             }
@@ -187,7 +189,8 @@ class Directory(nameAttrData: NameAttrData, hash: Hash = Hash(HashSpec(HashSpec.
         writeRoot(outStream)
 
         outStream.close()
-        return HashValue(hashOutStream.hash())
+        hash.value = HashValue(hashOutStream.hash())
+        return hash.value
     }
 
     override suspend fun flushImplementation(): HashValue {
@@ -230,9 +233,9 @@ class BlobEntry(nameAttrData: NameAttrData, hash: Hash) : DirectoryEntry(BLOB, n
     constructor(name: String, hash: Hash) : this(NameAttrData(name), hash)
 
     companion object {
-        suspend fun read(inStream: AsyncInStream): BlobEntry {
+        suspend fun read(inStream: AsyncInStream, parent: HashSpec?): BlobEntry {
             val nameAttrData = NameAttrData.read(inStream)
-            val hash = Hash.read(inStream)
+            val hash = Hash.read(inStream, parent)
             return BlobEntry(nameAttrData, hash)
         }
     }

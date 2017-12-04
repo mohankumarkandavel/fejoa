@@ -17,7 +17,8 @@ class ChunkContainerTest : ChunkContainerTestBase() {
         runBlocking {
             val dirName = "testAppendDir"
             val name = "test"
-            val config = ContainerSpec(HashSpec(), BoxSpec())
+            val seed = ByteArray(0)
+            val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_FIXED_8K, null), BoxSpec())
             config.hashSpec.setFixedSizeChunking(180)
             var chunkContainer = prepareContainer(dirName, name, config)
 
@@ -89,7 +90,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
     fun testTruncate() = runBlocking {
         val dirName = "testTruncateDir"
         val name = "test"
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_FIXED_8K, null), BoxSpec())
         config.hashSpec.setFixedSizeChunking(180)
         val chunkContainer = prepareContainer(dirName, name, config)
         val containerOutputStream = ChunkContainerOutStream(chunkContainer)
@@ -140,7 +141,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
     fun testTruncateAll() = runBlocking {
         val dirName = "testTruncateAllDir"
         val name = "test"
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_FIXED_8K, null), BoxSpec())
         config.hashSpec.setFixedSizeChunking(180)
         val chunkContainer = prepareContainer(dirName, name, config)
         val containerOutputStream = ChunkContainerOutStream(chunkContainer)
@@ -168,7 +169,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
     fun testEditing() = runBlocking {
         val dirName = "testEditingDir"
         val name = "test"
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_FIXED_8K, null), BoxSpec())
         config.hashSpec.setFixedSizeChunking(180)
         var chunkContainer = prepareContainer(dirName, name, config)
         // test empty chunk container
@@ -204,7 +205,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
         val dirName = "testHashDir"
         val name = "test"
         val dataSplitter = FixedBlockSplitter(2)
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_FIXED_8K, null), BoxSpec())
         config.hashSpec.setFixedSizeChunking(180)
         val chunkContainer = prepareContainer(dirName, name, config)
 
@@ -271,7 +272,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
         val name = "test"
         val dataString = "1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|"
         val dataSplitter = createByteTriggerSplitter('|'.toByte())
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_RABIN_2KB_8KB, null), BoxSpec())
         config.hashSpec.setRabinChunking(256, 180)
         val chunkContainer = prepareContainer(dirName, name, config)
         var outputStream = ByteArrayOutStream()
@@ -335,7 +336,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
         val dirName = "testSeekOutputStreamDir"
         val name = "test"
         val dataSplitter = createByteTriggerSplitter('|'.toByte())
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_RABIN_2KB_8KB, null), BoxSpec())
         config.hashSpec.setRabinChunking(256, 180)
 
         var chunkContainer = prepareContainer(dirName, name, config)
@@ -464,7 +465,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
 
         val dirName = "testSeekOutputStreamEditingLarge"
         val name = "test"
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_RABIN_2KB_8KB, null), BoxSpec())
         config.hashSpec.setRabinChunking(HashSpec.HashType.FEJOA_RABIN_2KB_8KB)
         var chunkContainer = prepareContainer(dirName, name, config)
         val outputStream = ChunkContainerOutStream(chunkContainer)
@@ -492,7 +493,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
         val dirName = "testInsertSimpleDir"
         val name = "insertTest"
         val dataSplitter = createByteTriggerSplitter('|'.toByte())
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_RABIN_2KB_8KB, null), BoxSpec())
         config.hashSpec.setRabinChunking(256, 180)
         var chunkContainer = prepareContainer(dirName, name, config)
         var outputStream = ChunkContainerOutStream(chunkContainer, RandomDataAccess.Mode.INSERT,
@@ -560,7 +561,7 @@ class ChunkContainerTest : ChunkContainerTestBase() {
     fun testInsertRandom() = runBlocking {
         val dirName = "testInsertRandomDir"
         val name = "insertTest"
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_RABIN_2KB_8KB, null), BoxSpec())
         config.hashSpec.setRabinChunking(1024 * 1, 256)
         var chunkContainer = prepareContainer(dirName, name, config)
         var outputStream = ChunkContainerOutStream(chunkContainer, RandomDataAccess.Mode.INSERT)

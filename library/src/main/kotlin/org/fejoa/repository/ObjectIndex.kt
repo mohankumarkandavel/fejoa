@@ -13,11 +13,11 @@ class EntryRefList {
     val entries: MutableList<EntryRef> = ArrayList()
 
     companion object {
-        suspend fun read(inStream: AsyncInStream): EntryRefList {
+        suspend fun read(inStream: AsyncInStream, parent: HashSpec?): EntryRefList {
             val nEntries = VarInt.read(inStream).first
             val entryRefList = EntryRefList()
             (0 until nEntries).forEach {
-                entryRefList.entries.add(EntryRef.read(inStream))
+                entryRefList.entries.add(EntryRef.read(inStream, parent))
             }
             return entryRefList
         }
@@ -77,11 +77,11 @@ open class EntryRef(val type: RefType, val containerRef: ChunkContainerRef) {
     // |RefType|
     // |ChunkContainerRef|
     companion object {
-        suspend fun read(inStream: AsyncInStream): EntryRef {
+        suspend fun read(inStream: AsyncInStream, parent: HashSpec?): EntryRef {
             val refTypeValue = inStream.read()
             val refType = EntryRef.RefType.values().firstOrNull { it.value == refTypeValue }
                     ?: throw IOException("Unknown type")
-            val containerRef = ChunkContainerRef.read(inStream)
+            val containerRef = ChunkContainerRef.read(inStream, parent)
             return when (refType) {
                 EntryRef.RefType.CHUNK_CONTAINER -> ChunkContainerEntryRef(containerRef)
                 EntryRef.RefType.CC_REV_LOG -> RevLogEntryRef.read(containerRef, inStream)
@@ -113,7 +113,7 @@ class RevLogEntryRef(containerRef: ChunkContainerRef) : EntryRef(RefType.CC_REV_
 
             val nEntries = VarInt.read(inStream).first
             (0 until nEntries).forEach {
-                val hash = Hash.read(inStream)
+                val hash = Hash.read(inStream, containerRef.hash.spec)
                 val offset = VarInt.read(inStream).first
                 revLogRef.versions.add(hash to offset)
             }
@@ -195,7 +195,7 @@ class ObjectIndexEntryList(val chunkContainer: ChunkContainer, var startOffset: 
         val stream = ChunkContainerRandomDataAccess(chunkContainer,
                 RandomDataAccess.Mode.WRITE.add(RandomDataAccess.Mode.READ))
         stream.seek(entry.second)
-        val entryRefList = EntryRefList.read(stream)
+        val entryRefList = EntryRefList.read(stream, chunkContainer.ref.hash.spec)
         stream.delete(entry.second, entry.first.length.toLong())
         stream.close()
         return entryRefList
@@ -235,7 +235,7 @@ class ObjectIndexEntryList(val chunkContainer: ChunkContainer, var startOffset: 
         val dataPos = directory.headers[index].second
         val inputStream = ChunkContainerInStream(chunkContainer)
         inputStream.seek(dataOffset + dataPos)
-        return EntryRefList.read(inputStream)
+        return EntryRefList.read(inputStream, chunkContainer.ref.hash.spec)
     }
 
     suspend fun write(outputStream: ChunkContainerRandomDataAccess) {
@@ -361,7 +361,7 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
             val versionValue = inputStream.read()
             val version = Version.values().firstOrNull { it.value == versionValue }
                     ?: throw IOException("Unknown version $versionValue")
-            val parent = ChunkContainerRef.read(inputStream)
+            val parent = ChunkContainerRef.read(inputStream, chunkContainer.ref.hash.spec)
             val recentEntries = ObjectIndexEntryList.read(chunkContainer, inputStream.position())
             inputStream.close()
 

@@ -40,7 +40,9 @@ class RepositoryTest : RepositoryTestBase() {
         val testData = ByteArray(1024 * 1000)
         Random().read(testData)
 
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val specSeed = ByteArray(20)
+        val config = ContainerSpec(HashSpec.createCyclicPoly(HashSpec.HashType.FEJOA_CYCLIC_POLY_2KB_8KB, specSeed),
+                BoxSpec())
         var container = ChunkContainer.create(accessor, config)
         val outStream = ChunkContainerOutStream(container)
         outStream.write(testData)
@@ -75,10 +77,10 @@ class RepositoryTest : RepositoryTestBase() {
     fun testRepositoryBasics() = runBlocking {
         val dirName = "testRepositoryBasicsDir"
         val branch = "basicBranch"
-        val storage = prepareStorage(dirName, branch)
-        val repoConfig = getRepoConfig()
-        repoConfig.hashSpec.setFixedSizeChunking(500)
-        var repository = Repository.create(branch, storage, repoConfig)
+
+        var repository = createRepo(dirName, branch)
+        val storage = repository.branchBackend
+        val repoConfig = repository.config
 
         val content = HashMap<String, DatabaseStringEntry>()
         add(repository, content, DatabaseStringEntry("file1", "file1"))

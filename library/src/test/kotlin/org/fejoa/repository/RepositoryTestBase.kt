@@ -1,13 +1,10 @@
 package org.fejoa.repository
 
-import kotlinx.coroutines.experimental.runBlocking
 import org.fejoa.chunkcontainer.*
-import org.fejoa.crypto.CryptoHelper
 import org.fejoa.storage.KeepOursUnchanged
 import org.fejoa.support.PathUtils
 import org.fejoa.support.toUTF
 import org.fejoa.support.toUTFString
-import kotlin.test.BeforeTest
 
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -46,19 +43,17 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
 
     suspend protected fun createRepo(dirName: String, branch: String): Repository {
         val storage = prepareStorage(dirName, branch)
-        val repoConfig = getRepoConfig()
-        repoConfig.hashSpec.setFixedSizeChunking(500)
-        return Repository.create(branch, storage, repoConfig)
+        return Repository.create(branch, storage, getRepoConfig())
     }
 
     internal class TestBlob(val content: String)
 
-    internal class TestDirectory {
-        var hash: Hash = Hash()
+    internal class TestDirectory(spec: HashSpec) {
+        var hash: Hash = Hash.createChild(spec.createChild())
         var content: MutableMap<String, TestBlob> = HashMap()
 
         fun clone(): TestDirectory {
-            val clone = TestDirectory()
+            val clone = TestDirectory(hash.spec)
             clone.content.putAll(this.content)
             clone.hash = hash.clone()
             return clone
@@ -74,7 +69,7 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
     }
 
     internal class TestRepository(val repository: Repository, var head: TestCommit? = null) {
-        var workingDir = TestDirectory()
+        var workingDir = TestDirectory(repository.config.hashSpec)
 
         suspend fun clone(): TestRepository {
             val clone = TestRepository(Repository.open(repository.getBranch(), repository.getRepositoryRef(),

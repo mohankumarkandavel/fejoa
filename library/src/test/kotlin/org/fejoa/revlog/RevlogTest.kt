@@ -16,7 +16,7 @@ class RevlogTest : ChunkContainerTestBase() {
     fun testBasics() = runBlocking {
         val dirName = "testRevlogContainerDir"
         val name = "test"
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+        val config = ContainerSpec(HashSpec(HashSpec.HashType.FEJOA_FIXED_8K, null), BoxSpec())
         config.hashSpec.setFixedSizeChunking(180)
         var chunkContainer = prepareContainer(dirName, name, config)
 

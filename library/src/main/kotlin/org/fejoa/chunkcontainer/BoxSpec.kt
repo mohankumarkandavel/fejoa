@@ -41,7 +41,7 @@ class BoxSpec(val encInfo: EncryptionInfo = EncryptionInfo(),
                 val rawByte = inStream.readByte().toInt()
                 val typeValue = rawByte and ENC_TYPE_MASK
                 val type = EncryptionInfo.Type.values().firstOrNull { it.value == typeValue }
-                        ?: throw IOException("Unknown type")
+                        ?: throw IOException("Unknown type $typeValue")
                 val data = if (rawByte and MOST_SIGNIFICANT_BIT != 0) inStream.readVarIntDelimited().first
                 else ByteArray(0)
                 return EncryptionInfo(type, data)

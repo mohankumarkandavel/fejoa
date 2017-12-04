@@ -84,7 +84,7 @@ internal open class GetChunkContainerJob(parent: Job?, accessor: ChunkAccessor, 
 }
 
 internal class GetObjectIndexJob(parent: Job?, transaction: ChunkAccessors.Transaction,
-                                 pointer: ChunkContainerRef)
+                                 pointer: ChunkContainerRef, val config: RepositoryConfig)
     : GetChunkContainerJob(parent, transaction.getCommitAccessor(pointer.containerSpec), pointer) {
     private var doneCount = 0
     var objectIndex: ObjectIndex? = null
@@ -96,7 +96,7 @@ internal class GetObjectIndexJob(parent: Job?, transaction: ChunkAccessors.Trans
         doneCount++
 
         // we only read the chunk container so we don't need a config
-        objectIndex = ObjectIndex.open(RepositoryConfig(), chunkContainer!!)
+        objectIndex = ObjectIndex.open(config, chunkContainer!!)
         chunkFetcher.enqueueObjectIndexJob(objectIndex!!)
     }
 }
@@ -124,7 +124,7 @@ class ChunkFetcher(private val transaction: ChunkAccessors.Transaction, private 
         objectIndex.listChunkContainers().map { it.second }
                 .filterNot { rawAccessor.hasChunk(it.boxHash).await() }
                 .forEach {
-                    enqueueJob(GetChunkContainerJob(null, objectIndex!!.getChunkAccessor(it),
+                    enqueueJob(GetChunkContainerJob(null, objectIndex.getChunkAccessor(it),
                             it))
                 }
     }

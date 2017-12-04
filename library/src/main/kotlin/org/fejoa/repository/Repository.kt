@@ -10,15 +10,15 @@ import org.fejoa.support.*
 class CryptoConfig(val secretKey: SecretKey, val symmetric: CryptoSettings.Symmetric)
 
 // TODO remove crypto config?
-class RepositoryConfig(val crypto: CryptoConfig? = null,
-                       val hashSpec: HashSpec = HashSpec(),
+class RepositoryConfig(val hashSpec: HashSpec,
                        val boxSpec: BoxSpec = BoxSpec(),
-                       val revLog: RevLog = RevLog()) {
+                       val revLog: RevLog = RevLog(),
+                       val crypto: CryptoConfig? = null) {
 
     class RevLog(val maxRevEntrySize: Long = 4 * 1024 * 1024)
 
     val containerSpec: ContainerSpec
-        get() = ContainerSpec(hashSpec, boxSpec)
+        get() = ContainerSpec(hashSpec.createChild(), boxSpec)
 }
 
 
@@ -26,8 +26,8 @@ class RepositoryConfig(val crypto: CryptoConfig? = null,
 class RepositoryRef(val objectIndexRef: ChunkContainerRef, val head: Hash) {
     companion object {
         suspend fun read(inStream: AsyncInStream): RepositoryRef {
-            val objectIndexRef = ChunkContainerRef.read(inStream)
-            val head = Hash.read(inStream)
+            val objectIndexRef = ChunkContainerRef.read(inStream, null)
+            val head = Hash.read(inStream, objectIndexRef.hash.spec)
             return RepositoryRef(objectIndexRef, head)
         }
     }
@@ -49,7 +49,7 @@ class Repository private constructor(private val branch: String,
     private var transaction: LogRepoTransaction = LogRepoTransaction(transaction)
     private var headCommit: Commit? = null
     val commitCache = CommitCache(this)
-    val ioDatabase = IODatabaseCC(Directory(""), objectIndex, transaction, config.containerSpec)
+    val ioDatabase = IODatabaseCC(Directory("", config.hashSpec.createChild()), objectIndex, transaction, config.containerSpec)
     private val mergeParents = ArrayList<Hash>()
     val branchLogIO: BranchLogIO
 
@@ -74,7 +74,7 @@ class Repository private constructor(private val branch: String,
 
         suspend fun open(branch: String, ref: RepositoryRef, branchBackend: StorageBackend.BranchBackend,
                          crypto: CryptoConfig?): Repository {
-            val repoConfig = RepositoryConfig(crypto, ref.objectIndexRef.hash.spec, ref.objectIndexRef.boxSpec)
+            val repoConfig = RepositoryConfig(ref.objectIndexRef.hash.spec, ref.objectIndexRef.boxSpec, crypto = crypto)
 
             val containerSpec = repoConfig.containerSpec
             val accessors: ChunkAccessors = RepoChunkAccessors(branchBackend.getChunkStorage(), repoConfig)
@@ -115,7 +115,7 @@ class Repository private constructor(private val branch: String,
     }
 
     override suspend fun getHead(): Hash {
-        return getHeadCommit()?.getHash()?.clone() ?: Hash()
+        return getHeadCommit()?.getHash()?.clone() ?: Hash.createChild(config.hashSpec.createChild())
     }
 
     private fun getParents(): Collection<HashValue> {
@@ -239,12 +239,12 @@ class Repository private constructor(private val branch: String,
                                        mergeParents: Collection<Hash>): Hash = synchronized(this) {
         // check if we need to commit
         if (!isModified() && mergeParents.isEmpty())
-            return headCommit?.getHash() ?: Hash()
+            return headCommit?.getHash() ?: Hash.createChild(config.hashSpec.createChild())
 
         // flush in any case to write open write handles and to be able to determine if we need to commit
         val rootTree = ioDatabase.flush()
         if (mergeParents.isEmpty() && headCommit != null && headCommit!!.getHash() == rootTree)
-            return Hash()
+            return headCommit!!.getHash()
 
         // write entries to the objectIndex
         ioDatabase.getModifiedChunkContainer().forEach {
@@ -253,7 +253,7 @@ class Repository private constructor(private val branch: String,
         ioDatabase.clearModifiedChunkContainer()
         writeTree(ioDatabase.getRootDirectory())
         // write the rootTree to the object index
-        val commit = Commit(rootTree)
+        val commit = Commit(rootTree, Hash.createChild(config.hashSpec))
         if (headCommit != null)
             commit.parents.add(headCommit!!.getHash())
         for (mergeParent in mergeParents)

@@ -14,14 +14,15 @@ class ChunkContainerRef private constructor(val hash: Hash, val boxSpec: BoxSpec
                                             var iv: ByteArray = Config.newIV()) {
 
     constructor(hashSpec: HashSpec, boxSpec: BoxSpec)
-            : this(hash = Hash(hashSpec.clone()), boxSpec = boxSpec.clone())
+            : this(hash = Hash(hashSpec.clone(), Config.newDataHash()), boxSpec = boxSpec.clone())
 
     constructor(containerSpec: ContainerSpec)
-            : this(hash = Hash(containerSpec.hashSpec.clone()), boxSpec = containerSpec.boxSpec.clone())
+            : this(hash = Hash(containerSpec.hashSpec.clone(), Config.newDataHash()),
+            boxSpec = containerSpec.boxSpec.clone())
 
     companion object {
-        suspend fun read(inStream: AsyncInStream): ChunkContainerRef {
-            val hash = Hash.read(inStream)
+        suspend fun read(inStream: AsyncInStream, parent: HashSpec?): ChunkContainerRef {
+            val hash = Hash.read(inStream, parent)
             val spec = BoxSpec.read(inStream)
             val length = VarInt.read(inStream).first
             val nLevel = inStream.readByte().toInt()

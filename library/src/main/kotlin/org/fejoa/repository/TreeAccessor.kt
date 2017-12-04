@@ -91,7 +91,7 @@ class TreeAccessor(val root: Directory, private var transaction: ChunkAccessors.
             val subDir = parts[i]
             var currentEntry = currentDir.getEntry(subDir)
             if (currentEntry == null) {
-                currentEntry = Directory(subDir)
+                currentEntry = Directory(subDir, root.hash.spec)
                 currentDir.put(currentEntry)
                 currentDir = currentEntry
             } else {

@@ -11,10 +11,16 @@ import kotlin.test.assertTrue
 
 class ObjectIndexTest : ChunkContainerTestBase() {
 
+    private fun createHashSpec(): HashSpec {
+        val seed = ByteArray(5)
+        return HashSpec.createCyclicPoly(HashSpec.HashType.FEJOA_CYCLIC_POLY_2KB_8KB, seed)
+    }
+
     suspend private fun createChunkContainer(): ChunkContainer {
         val dirName = "ObjectIndexTestDir"
         val name = "test"
-        val config = ContainerSpec(HashSpec(), BoxSpec())
+
+        val config = ContainerSpec(createHashSpec(), BoxSpec())
         config.hashSpec.setFixedSizeChunking(500)
         return prepareContainer(dirName, name, config)
     }
@@ -49,7 +55,7 @@ class ObjectIndexTest : ChunkContainerTestBase() {
     @Test
     fun testBasics() = runBlocking {
         val objectIndexCC = createChunkContainer()
-        var objectIndex = ObjectIndex.create(RepositoryConfig(), objectIndexCC)
+        var objectIndex = ObjectIndex.create(RepositoryConfig(createHashSpec()), objectIndexCC)
         val content = HashMap<String, MutableList<Pair<Hash, ByteArray>>>()
 
         addVersion(content, objectIndex, "test", "Hello")
@@ -57,20 +63,20 @@ class ObjectIndexTest : ChunkContainerTestBase() {
 
         verifyContent(content, objectIndex)
         objectIndex.flush()
-        objectIndex = ObjectIndex.open(RepositoryConfig(), objectIndexCC)
+        objectIndex = ObjectIndex.open(RepositoryConfig(createHashSpec()), objectIndexCC)
         verifyContent(content, objectIndex)
 
         addVersion(content, objectIndex,"test", "Hello World")
         verifyContent(content, objectIndex)
         // flush and read again
         objectIndex.flush()
-        objectIndex = ObjectIndex.open(RepositoryConfig(), objectIndexCC)
+        objectIndex = ObjectIndex.open(RepositoryConfig(createHashSpec()), objectIndexCC)
         verifyContent(content, objectIndex)
 
         addVersion(content, objectIndex,"test", "Hello World more changes")
         verifyContent(content, objectIndex)
         objectIndex.flush()
-        objectIndex = ObjectIndex.open(RepositoryConfig(), objectIndexCC)
+        objectIndex = ObjectIndex.open(RepositoryConfig(createHashSpec()), objectIndexCC)
         verifyContent(content, objectIndex)
 
         // multiple paths
@@ -81,7 +87,7 @@ class ObjectIndexTest : ChunkContainerTestBase() {
         addVersion(content, objectIndex,"test2/sub", "And another one")
         verifyContent(content, objectIndex)
         objectIndex.flush()
-        objectIndex = ObjectIndex.open(RepositoryConfig(), objectIndexCC)
+        objectIndex = ObjectIndex.open(RepositoryConfig(createHashSpec()), objectIndexCC)
         verifyContent(content, objectIndex)
 
         // some more edits
@@ -89,7 +95,7 @@ class ObjectIndexTest : ChunkContainerTestBase() {
         addVersion(content, objectIndex,"test3", "Test 3")
         verifyContent(content, objectIndex)
         objectIndex.flush()
-        objectIndex = ObjectIndex.open(RepositoryConfig(), objectIndexCC)
+        objectIndex = ObjectIndex.open(RepositoryConfig(createHashSpec()), objectIndexCC)
         verifyContent(content, objectIndex)
     }
 }

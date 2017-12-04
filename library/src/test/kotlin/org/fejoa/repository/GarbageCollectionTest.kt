@@ -28,7 +28,7 @@ class GarbageCollectionTest : RepositoryTestBase() {
         }
 
         // At least 6 files, 1 for commit, 1 for the dir structure and 1 for the object index
-        assertTrue(count > 9)
+        assertTrue(count >= 9)
 
         // garbage collect to a new repo
         var target = createRepo("gcTestTarget", "gcTest")

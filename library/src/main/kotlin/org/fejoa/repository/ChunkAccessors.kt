@@ -45,7 +45,7 @@ interface ChunkAccessors {
 }
 
 
-class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryConfig = RepositoryConfig())
+class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryConfig)
     : ChunkAccessors {
 
     override fun startTransaction(): ChunkAccessors.Transaction {

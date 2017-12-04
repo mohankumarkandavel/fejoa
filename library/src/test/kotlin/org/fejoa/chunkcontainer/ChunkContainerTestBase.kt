@@ -50,13 +50,20 @@ open class ChunkContainerTestBase {
     }
 
     protected fun getRepoConfig(): RepositoryConfig {
+        val seed = ByteArray(10) // just some zeros
+        val hashSpec = HashSpec.createCyclicPoly(HashSpec.HashType.FEJOA_CYCLIC_POLY_2KB_8KB, seed)
+
         val boxSpec = BoxSpec(
                 encInfo = BoxSpec.EncryptionInfo(BoxSpec.EncryptionInfo.Type.PARENT),
                 zipType = BoxSpec.ZipType.DEFLATE,
                 zipBeforeEnc = true
         )
 
-        return RepositoryConfig(boxSpec = boxSpec, crypto = CryptoConfig(secretKey!!, settings.symmetric))
+        return RepositoryConfig(
+                hashSpec = hashSpec,
+                boxSpec = boxSpec,
+                crypto = CryptoConfig(secretKey!!, settings.symmetric)
+        )
     }
 
     protected fun ChunkStorage.prepareAccessors(): ChunkAccessors {

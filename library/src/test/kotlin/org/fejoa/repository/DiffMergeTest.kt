@@ -18,15 +18,16 @@ class DiffMergeTest : RepositoryTestBase() {
     suspend private fun addFile(box: Directory, name: String): BlobEntry {
         val dataHash = HashValue(CryptoHelper.sha256Hash(CryptoHelper.crypto.generateSalt()))
 
-        val entry = BlobEntry(name, Hash(HashSpec(), dataHash))
+        val entry = BlobEntry(name, Hash(HashSpec(HashSpec.HashType.SHA_256, null), dataHash))
         box.put(entry)
         return entry
     }
 
     @Test
     fun testDiff() = runBlocking {
-        val ours = Directory("ours")
-        val theirs = Directory("theirs")
+        val seed = ByteArray(1)
+        val ours = Directory("ours", HashSpec.createCyclicPoly(HashSpec.HashType.FEJOA_CYCLIC_POLY_2KB_8KB, seed))
+        val theirs = Directory("theirs", HashSpec.createCyclicPoly(HashSpec.HashType.FEJOA_CYCLIC_POLY_2KB_8KB, seed))
 
         val file1 = addFile(ours, "test1")
         var iterator = DirectoryDiffIterator("", ours, theirs)

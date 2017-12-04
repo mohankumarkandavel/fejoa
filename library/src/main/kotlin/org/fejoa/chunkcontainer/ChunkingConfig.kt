@@ -19,11 +19,23 @@ interface ChunkingConfig {
      */
     suspend fun getSplitter(factor: Float): ChunkSplitter
     fun getNodeWriteStrategy(normalizeChunkSize: Boolean): NodeWriteStrategy
-    fun toByteArray(): ByteArray
+    fun getExtensionData(): ByteArray
     fun clone(): ChunkingConfig
+    /**
+     * Derives a child config from this (parent) chunking config
+     */
+    fun createChild(): ChunkingConfig
     val chunkingType: HashSpec.HashType
-    val isCompact: Boolean
+    var isCompact: Boolean
+    fun hasExtension(): Boolean {
+        return !isDefault
+    }
     val isDefault: Boolean
+
+    // set the parent this config is based on, e.g. the parent that provides the chunking seed
+    fun setParent(parent: ChunkingConfig) {
+
+    }
 }
 
 class NonChunkingConfig (chunkingType: HashSpec.HashType): ChunkingConfig {
@@ -35,8 +47,14 @@ class NonChunkingConfig (chunkingType: HashSpec.HashType): ChunkingConfig {
         throw Exception("Not a chunking hash")
     }
 
-    override fun toByteArray(): ByteArray {
+    override fun getExtensionData(): ByteArray {
         return ByteArray(0)
+    }
+
+    override fun createChild(): ChunkingConfig {
+        val clone = clone()
+        clone.setParent(this)
+        return clone
     }
 
     override fun clone(): ChunkingConfig {
@@ -44,8 +62,9 @@ class NonChunkingConfig (chunkingType: HashSpec.HashType): ChunkingConfig {
     }
 
     override val chunkingType: HashSpec.HashType = chunkingType
-    override val isDefault: Boolean = false
-    override val isCompact: Boolean = false
+    override val isDefault: Boolean = true
+    override var isCompact: Boolean = false
+        set(value) = throw Exception("Not allowed")
 }
 
 
@@ -54,13 +73,14 @@ class FixedSizeChunkingConfig : ChunkingConfig {
         SIZE(0)
     }
 
-    override var chunkingType = HashSpec.HashType.FEJOA_FIXED_CUSTOM
+    override var chunkingType = HashSpec.HashType.FEJOA_FIXED_8K
         private set
     internal var size: Int = 0
     internal var defaultConfig: FixedSizeChunkingConfig? = null
 
-    private constructor(type: HashSpec.HashType, size: Int) {
+    private constructor(type: HashSpec.HashType, defaultConfig: FixedSizeChunkingConfig?, size: Int) {
         this.chunkingType = type
+        this.defaultConfig = defaultConfig
         this.size = size
     }
 
@@ -72,10 +92,9 @@ class FixedSizeChunkingConfig : ChunkingConfig {
         return FixedSizeNodeWriteStrategy(size, getNodeSplitterFactory(), 0, normalizeChunkSize)
     }
 
-    override val isCompact: Boolean
-        get() = chunkingType.value and HashSpec.COMPACT_MASK != 0
+    override var isCompact: Boolean = false
 
-    override fun toByteArray(): ByteArray {
+    override fun getExtensionData(): ByteArray {
         val buffer = ProtocolBufferLight()
         if (size != defaultConfig!!.size)
             buffer.put(FixedSizeDetailTag.SIZE.value, size)
@@ -84,10 +103,10 @@ class FixedSizeChunkingConfig : ChunkingConfig {
         return outputStream.toByteArray()
     }
 
-    private constructor(type: HashSpec.HashType, defaultConfig: FixedSizeChunkingConfig?, size: Int) {
-        this.chunkingType = type
-        this.defaultConfig = defaultConfig
-        this.size = size
+    override fun createChild(): ChunkingConfig {
+        val clone = clone()
+        clone.setParent(this)
+        return clone
     }
 
     override fun clone(): ChunkingConfig {
@@ -95,7 +114,7 @@ class FixedSizeChunkingConfig : ChunkingConfig {
     }
 
     override val isDefault: Boolean
-        get() = false
+        get() = this == defaultConfig
 
     companion object {
         fun read(type: HashSpec.HashType, custom: Boolean, extra: ByteArray): FixedSizeChunkingConfig {
@@ -120,8 +139,8 @@ class FixedSizeChunkingConfig : ChunkingConfig {
 
         private fun getDefault(type: HashSpec.HashType): FixedSizeChunkingConfig {
             return when (type) {
-                HashSpec.HashType.FEJOA_FIXED_CUSTOM -> getDefault(HashSpec.HashType.FEJOA_FIXED_8K).also { it.chunkingType = HashSpec.HashType.FEJOA_FIXED_CUSTOM }
-                HashSpec.HashType.FEJOA_FIXED_8K -> FixedSizeChunkingConfig(HashSpec.HashType.FEJOA_FIXED_8K, 8 * 1024)
+                HashSpec.HashType.FEJOA_FIXED_8K
+                    -> FixedSizeChunkingConfig(HashSpec.HashType.FEJOA_FIXED_8K, null,8 * 1024)
                 else -> throw Exception("Unknown chunking type")
             }
         }

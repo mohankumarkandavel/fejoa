@@ -8,7 +8,7 @@ import org.fejoa.storage.*
 import org.fejoa.support.*
 
 
-class Commit(var dir: Hash, val hashSpec: HashSpec = HashSpec(HashSpec.DEFAULT)) {
+class Commit constructor(var dir: Hash, val hash: Hash) {
     // |type (1|
     // |Directory ObjectRef|
     // [n parents]
@@ -26,20 +26,20 @@ class Commit(var dir: Hash, val hashSpec: HashSpec = HashSpec(HashSpec.DEFAULT))
         suspend fun read(hash: Hash, objectIndex: ObjectIndex): Commit {
             val container = objectIndex.getCommitChunkContainer(hash)
                     ?: throw Exception("Can't find commit ${hash.value}")
-            return read(ChunkContainerInStream(container))
+            return read(ChunkContainerInStream(container), hash.spec.createChild())
         }
 
-        suspend private fun read(inStream: AsyncInStream): Commit {
+        suspend private fun read(inStream: AsyncInStream, parent: HashSpec): Commit {
             val type = inStream.readByte().toInt()
             if (type != CommitType.COMMIT_V1.value)
                 throw Exception("Unexpected commit type; $type")
 
-            val dir = Hash.read(inStream)
+            val dir = Hash.read(inStream, parent)
             val nParents = VarInt.read(inStream).first
 
-            val commit = Commit(dir)
+            val commit = Commit(dir, Hash.createChild(parent))
             for (i in 0 until nParents) {
-                commit.parents += Hash.read(inStream)
+                commit.parents += Hash.read(inStream, parent)
             }
             commit.message = inStream.readVarIntDelimited().first
             return commit
@@ -56,10 +56,11 @@ class Commit(var dir: Hash, val hashSpec: HashSpec = HashSpec(HashSpec.DEFAULT))
     }
 
     suspend fun getHash(): Hash {
-        val hashOutStream = hashSpec.getHashOutStream()
+        val hashOutStream = hash.spec.getHashOutStream()
         val outStream = AsyncHashOutStream(AsyncByteArrayOutStream(), hashOutStream)
         write(outStream)
         outStream.close()
-        return Hash(hashSpec, HashValue(hashOutStream.hash()))
+        hash.value = HashValue(hashOutStream.hash())
+        return hash
     }
 }
