@@ -9,6 +9,7 @@ import org.fejoa.support.Future
 import org.fejoa.support.Future.Companion.completedFuture
 
 import java.io.*
+import java.util.*
 import java.util.concurrent.locks.Lock
 
 
@@ -18,7 +19,6 @@ import java.util.concurrent.locks.Lock
  * 2) head: points to the latest or topmost commit
  */
 class ChunkStoreBranchLog(logDir: File, branch: String, remote: String? = null) : BranchLog {
-    private var latestRev = 1
     private val headFile: File
     private val logFile: File
     private val fileLock: Lock
@@ -80,12 +80,6 @@ class ChunkStoreBranchLog(logDir: File, branch: String, remote: String? = null) 
         }
     }
 
-    private fun nextRevId(): Int {
-        val currentRev = latestRev
-        latestRev++
-        return currentRev
-    }
-
     override fun getHead(): Future<BranchLogEntry?> {
         if (entries == null)
             entries = readLogs()
@@ -96,7 +90,7 @@ class ChunkStoreBranchLog(logDir: File, branch: String, remote: String? = null) 
 
     @Throws(IOException::class)
     override fun add(id: HashValue, message: String, changes: List<HashValue>): Future<Unit> {
-        val entry = BranchLogEntry(nextRevId(), id, message)
+        val entry = BranchLogEntry(Date().time, id, message)
         entry.changes.addAll(changes)
         add(entry)
         return completedFuture(Unit)

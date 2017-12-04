@@ -23,6 +23,6 @@ interface BranchLogIO {
      *
      * Here is also the place to encrypt/decrypt the objectIndexRef.
      */
-    suspend fun writeToLog(repoRef: RepositoryRef): String
-    suspend fun readFromLog(logEntry: String): RepositoryRef
+    suspend fun writeToLog(repoRef: RepositoryRef): ByteArray
+    suspend fun readFromLog(logEntry: ByteArray): RepositoryRef
 }

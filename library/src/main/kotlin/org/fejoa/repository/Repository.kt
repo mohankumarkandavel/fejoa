@@ -338,7 +338,8 @@ class Repository private constructor(private val branch: String,
         val objectIndexRef =  objectIndex.flush()
         val repoRef = RepositoryRef(objectIndexRef, commit.getHash(), config)
         transaction.finishTransaction()
-        log.add(branchLogIO.logHash(repoRef), branchLogIO.writeToLog(repoRef), transaction.getObjectsWritten())
+        log.add(branchLogIO.logHash(repoRef), branchLogIO.writeToLog(repoRef).encodeBase64(),
+                transaction.getObjectsWritten())
         transaction = LogRepoTransaction(accessors.startTransaction())
         ioDatabase.setTransaction(transaction)
 

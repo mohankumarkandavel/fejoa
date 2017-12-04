@@ -9,14 +9,12 @@ import org.fejoa.support.*
 
 object RepositoryBuilder {
     fun getPlainBranchLogIO(): BranchLogIO = object: BranchLogIO {
-        suspend override fun writeToLog(repoRef: RepositoryRef): String {
-            val buffer = commitPointerToLog(repoRef)
-            return buffer.encodeBase64()
+        override suspend fun writeToLog(repoRef: RepositoryRef): ByteArray {
+            return commitPointerToLog(repoRef)
         }
 
-        override suspend fun readFromLog(logEntry: String): RepositoryRef {
-            val logEntryBytes = logEntry.decodeBase64()
-            return commitPointerFromLog(logEntryBytes)
+        override suspend fun readFromLog(logEntry: ByteArray): RepositoryRef {
+            return commitPointerFromLog(logEntry)
         }
     }
 
@@ -37,7 +35,7 @@ object RepositoryBuilder {
     fun getEncryptedBranchLogIO(key: SecretKey, symmetric: CryptoSettings.Symmetric)
             : BranchLogIO = object: BranchLogIO {
 
-        override suspend fun writeToLog(repoRef: RepositoryRef): String {
+        override suspend fun writeToLog(repoRef: RepositoryRef): ByteArray {
             val buffer = commitPointerToLog(repoRef)
             val crypto = CryptoHelper.crypto
             val iv = crypto.generateInitializationVector(symmetric.ivSize)
@@ -45,11 +43,11 @@ object RepositoryBuilder {
             val protoBuffer = ProtocolBufferLight()
             protoBuffer.put(TAG_IV, iv)
             protoBuffer.put(TAG_ENCDATA, encryptedMessage)
-            return protoBuffer.toByteArray().encodeBase64()
+            return protoBuffer.toByteArray()
         }
 
-        override suspend fun readFromLog(logEntry: String): RepositoryRef {
-            val protoBuffer = ProtocolBufferLight(logEntry.decodeBase64())
+        override suspend fun readFromLog(logEntry: ByteArray): RepositoryRef {
+            val protoBuffer = ProtocolBufferLight(logEntry)
             val iv = protoBuffer.getBytes(TAG_IV) ?: throw Exception("IV expected")
             val encData = protoBuffer.getBytes(TAG_ENCDATA) ?: throw Exception("Encrypted data expected")
             val plain = CryptoHelper.crypto.decryptSymmetric(encData, key, iv, symmetric).await()

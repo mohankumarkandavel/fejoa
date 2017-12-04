@@ -9,9 +9,9 @@ import org.fejoa.support.Future
 
 
 @Serializable
-class BranchLogEntry(var rev: Int = 0,
+class BranchLogEntry(val time: Long,
                      var entryId: HashValue = Config.newDataHash(),
-                     var message: String = "",
+                     var message: String,
                      @Optional
                      val changes: MutableList<HashValue> = ArrayList())
 
@@ -21,8 +21,8 @@ class BranchLogList(val entries: MutableList<BranchLogEntry> = ArrayList()) {
         entries.add(entry)
     }
 
-    fun add(rev: Int, id: HashValue, message: String, changes: MutableList<HashValue>) {
-        entries.add(BranchLogEntry(rev, id, message, changes))
+    fun add(time: Long, id: HashValue, message: String, changes: MutableList<HashValue>) {
+        entries.add(BranchLogEntry(time, id, message, changes))
     }
 }
 
