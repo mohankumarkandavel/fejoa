@@ -17,8 +17,12 @@ fun ByteArray.toHex(): String {
  * Loosely based on:
  * http://stackoverflow.com/questions/140131/convert-a-string-representation-of-a-hex-dump-to-a-byte-array-using-java
  */
-fun fromHex(hex: String): ByteArray {
-    assert(hex.length.rem(2) == 0)
+fun fromHex(hexIn: String): ByteArray {
+    val hex = if (hexIn.length.rem(2) == 0)
+        hexIn
+    else // try to fix the input string
+        "0" + hexIn
+
     val length = hex.length
     val buffer = ByteArray(length / 2)
     var i = 0
