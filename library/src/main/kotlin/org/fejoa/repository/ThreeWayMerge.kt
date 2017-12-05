@@ -1,10 +1,10 @@
 package org.fejoa.repository
 
 import org.fejoa.storage.Database
-import org.fejoa.storage.IMergeStrategy
+import org.fejoa.storage.MergeStrategy
 
 
-class ThreeWayMerge(val conflictSolver: IConflictSolver = TakeOursSolver()) : IMergeStrategy {
+class ThreeWayMerge(val conflictSolver: IConflictSolver = TakeOursSolver()) : MergeStrategy {
     class TakeOursSolver : ThreeWayMerge.IConflictSolver {
         override fun solve(path: String, ours: DirectoryEntry, theirs: DirectoryEntry): DirectoryEntry {
             return ours

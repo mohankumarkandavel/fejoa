@@ -1,7 +1,7 @@
 package org.fejoa.storage
 
 
-interface IMergeStrategy {
+interface MergeStrategy {
     /**
      * Merges theirs into ours
      */
@@ -9,7 +9,7 @@ interface IMergeStrategy {
 }
 
 
-class KeepOursUnchanged : IMergeStrategy {
+class KeepOursUnchanged : MergeStrategy {
     suspend override fun merge(ours: Database, theirs: Database) {
         // Do nothing just keep our branch
     }

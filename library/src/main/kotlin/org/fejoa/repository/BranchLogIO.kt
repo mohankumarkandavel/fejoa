@@ -3,6 +3,8 @@ package org.fejoa.repository
 import org.fejoa.storage.HashValue
 import org.fejoa.crypto.CryptoHelper
 import org.fejoa.protocolbufferlight.ProtocolBufferLight
+import org.fejoa.support.decodeBase64
+import org.fejoa.support.encodeBase64
 
 
 interface BranchLogIO {
@@ -25,4 +27,12 @@ interface BranchLogIO {
      */
     suspend fun writeToLog(repoRef: RepositoryRef): ByteArray
     suspend fun readFromLog(logEntry: ByteArray): RepositoryRef
+
+    suspend fun writeToLogString(repoRef: RepositoryRef): String {
+        return writeToLog(repoRef).encodeBase64()
+    }
+
+    suspend fun readFromLog(logEntry: String): RepositoryRef {
+        return readFromLog(logEntry.decodeBase64())
+    }
 }

@@ -192,7 +192,7 @@ class Repository private constructor(private val branch: String,
         return headCommit?.parents?.map { it.value } ?: emptyList()
     }
 
-    suspend override fun merge(mergeParents: Collection<Database>, mergeStrategy: IMergeStrategy)
+    suspend override fun merge(mergeParents: Collection<Database>, mergeStrategy: MergeStrategy)
             : Database.MergeResult {
         var result = Database.MergeResult.FAST_FORWARD
         val allowFastForward = mergeParents.size == 1
@@ -216,7 +216,7 @@ class Repository private constructor(private val branch: String,
         return false
     }
 
-    suspend private fun mergeSingleBranch(theirs: Database, mergeStrategy: IMergeStrategy,
+    suspend private fun mergeSingleBranch(theirs: Database, mergeStrategy: MergeStrategy,
                                           allowFastForward: Boolean): Database.MergeResult {
         if (theirs !is Repository)
             throw Exception("Unsupported repository")
@@ -338,8 +338,7 @@ class Repository private constructor(private val branch: String,
         val objectIndexRef =  objectIndex.flush()
         val repoRef = RepositoryRef(objectIndexRef, commit.getHash(), config)
         transaction.finishTransaction()
-        log.add(branchLogIO.logHash(repoRef), branchLogIO.writeToLog(repoRef).encodeBase64(),
-                transaction.getObjectsWritten())
+        log.add(branchLogIO.logHash(repoRef), branchLogIO.writeToLogString(repoRef), transaction.getObjectsWritten())
         transaction = LogRepoTransaction(accessors.startTransaction())
         ioDatabase.setTransaction(transaction)
 

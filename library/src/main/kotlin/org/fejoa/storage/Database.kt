@@ -20,6 +20,6 @@ interface Database : IODatabase {
      * All involved databases may have uncommitted changes. If the databases don't have uncommitted changes the head
      * may be fast forwarded to the latest commit (if possible). In this case the merge don't need to be committed.
      */
-    suspend fun merge(mergeParents: Collection<Database>, mergeStrategy: IMergeStrategy): MergeResult
+    suspend fun merge(mergeParents: Collection<Database>, mergeStrategy: MergeStrategy): MergeResult
     suspend fun getDiff(baseCommit: HashValue, endCommit: HashValue): DatabaseDiff
 }
