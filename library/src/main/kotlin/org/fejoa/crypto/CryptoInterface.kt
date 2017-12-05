@@ -12,8 +12,16 @@ interface CryptoInterface {
 
     fun generateSymmetricKey(settings: CryptoSettings.KeyTypeSettings): Future<SecretKey>
 
-    fun generateInitializationVector(size: Int): ByteArray
-    fun generateSalt(): ByteArray
+    fun generateInitializationVector(sizeInBits: Int): ByteArray {
+        val buffer = ByteArray(sizeInBits / 8)
+        val random = Random()
+        random.read(buffer)
+        return buffer
+    }
+
+    fun generateSalt(): ByteArray {
+        return generateInitializationVector(32 * 8)
+    }
 
     fun encryptAsymmetric(input: ByteArray, key: PublicKey, settings: CryptoSettings.Asymmetric)
             : Future<ByteArray>

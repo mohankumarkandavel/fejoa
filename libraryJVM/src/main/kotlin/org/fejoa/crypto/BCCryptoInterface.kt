@@ -151,17 +151,6 @@ class BCCryptoInterface : CryptoInterface {
         return Future.completedFuture(SecreteKeyJVM(keyGenerator.generateKey()))
     }
 
-    override fun generateInitializationVector(sizeBits: Int): ByteArray {
-        val random = SecureRandom()
-        val bytes = ByteArray(sizeBits / 8)
-        random.nextBytes(bytes)
-        return bytes
-    }
-
-    override fun generateSalt(): ByteArray {
-        return generateInitializationVector(32 * 8)
-    }
-
     @Throws(CryptoException::class)
     override fun encryptSymmetric(input: ByteArray, secretKey: SecretKey, iv: ByteArray,
                          settings: CryptoSettings.Symmetric): Future<ByteArray> {

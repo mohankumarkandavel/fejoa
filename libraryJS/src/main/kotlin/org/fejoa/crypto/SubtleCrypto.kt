@@ -5,14 +5,13 @@ import org.fejoa.async.toFuture
 import org.fejoa.jsbindings.CryptoKey
 import org.fejoa.jsbindings.crypto
 import org.fejoa.support.Future
-import org.fejoa.support.Random
 import org.fejoa.support.async
 import org.fejoa.support.toUTF
 import kotlin.browser.window
 import kotlin.js.json
 
 
-class SecretKeyWrapper(val key: CryptoKey, algorithm: String) : SecretKey {
+class CryptoKeyWrapper(val key: CryptoKey, algorithm: String) : SecretKey {
     override val algorithm: String = algorithm
 }
 
@@ -72,7 +71,7 @@ class SubtleCrypto : CryptoInterface {
                     true,
                     arrayOf("encrypt", "decrypt")).await()
 
-        return@async SecretKeyWrapper(derivedKey, symKeyType.jsName)
+        return@async CryptoKeyWrapper(derivedKey, symKeyType.jsName)
     }
 
     override fun generateKeyPair(settings: CryptoSettings.KeyTypeSettings): Future<KeyPair> {
@@ -81,17 +80,6 @@ class SubtleCrypto : CryptoInterface {
 
     override fun generateSymmetricKey(settings: CryptoSettings.KeyTypeSettings): Future<SecretKey> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    override fun generateInitializationVector(size: Int): ByteArray {
-        val buffer = ByteArray(size)
-        val random = Random()
-        random.read(buffer)
-        return buffer
-    }
-
-    override fun generateSalt(): ByteArray {
-        return generateInitializationVector(16)
     }
 
     override fun encryptAsymmetric(input: ByteArray, key: PublicKey, settings: CryptoSettings.Asymmetric): Future<ByteArray> {
@@ -106,7 +94,7 @@ class SubtleCrypto : CryptoInterface {
         val algorithm = json("name" to toSymJSAlgorithm(settings.algorithm),
                 "counter" to iv,
                 "length" to settings.ivSize)
-        val cryptoKey = (secretKey as SecretKeyWrapper).key
+        val cryptoKey = (secretKey as CryptoKeyWrapper).key
         return window.crypto().subtle.encrypt(algorithm, cryptoKey, input).toFuture()
     }
 
@@ -114,12 +102,12 @@ class SubtleCrypto : CryptoInterface {
         val algorithm = json("name" to toSymJSAlgorithm(settings.algorithm),
                 "counter" to iv,
                 "length" to settings.ivSize)
-        val cryptoKey = (secretKey as SecretKeyWrapper).key
+        val cryptoKey = (secretKey as CryptoKeyWrapper).key
         return window.crypto().subtle.decrypt(algorithm, cryptoKey, input).toFuture()
     }
 
     override fun encode(key: Key): Future<ByteArray> {
-        val cryptoKey = (key as SecretKeyWrapper).key
+        val cryptoKey = (key as CryptoKeyWrapper).key
         return window.crypto().subtle.exportKey("raw", cryptoKey).toFuture().then { it as ByteArray }
     }
 
@@ -136,7 +124,7 @@ class SubtleCrypto : CryptoInterface {
                 key,
                 json("name" to toJSKeyType(keyType)),
                 true,
-                arrayOf("encrypt", "decrypt")).toFuture().then { SecretKeyWrapper(it, keyType) }
+                arrayOf("encrypt", "decrypt")).toFuture().then { CryptoKeyWrapper(it, keyType) }
     }
 
     override fun privateKeyFromRaw(key: ByteArray, keyType: String): Future<PrivateKey> {
