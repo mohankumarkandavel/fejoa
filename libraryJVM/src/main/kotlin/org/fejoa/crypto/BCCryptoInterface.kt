@@ -260,7 +260,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val sig: Signature
             try {
-                sig = java.security.Signature.getInstance(settings.algorithm!!)
+                sig = java.security.Signature.getInstance(settings.algorithm)
                 sig.initVerify((key as PublicKeyJVM).key as java.security.PublicKey)
                 sig.update(message)
                 return@async sig.verify(signature)
@@ -277,7 +277,7 @@ class BCCryptoInterface : CryptoInterface {
     }
 
     override fun encode(key: Key): Future<ByteArray> {
-        return completedFuture(key.toByteArray())
+        return completedFuture((key as KeyJVM).toByteArray())
     }
 
     override fun secretKeyFromRaw(key: ByteArray, keySizeBytes: Int, algorithm: String): Future<SecretKey> {

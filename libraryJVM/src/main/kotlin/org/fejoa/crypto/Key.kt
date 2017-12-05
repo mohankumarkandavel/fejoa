@@ -5,7 +5,7 @@ open class KeyJVM(val key: java.security.Key) : Key {
     override val algorithm: String
         get() = key.algorithm
 
-    override fun toByteArray(): ByteArray {
+    fun toByteArray(): ByteArray {
         return key.encoded
     }
 }

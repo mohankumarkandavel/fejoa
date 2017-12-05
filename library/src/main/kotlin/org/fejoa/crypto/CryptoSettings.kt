@@ -68,7 +68,7 @@ class CryptoSettings private constructor() {
                 cryptoSettings.symmetric.keySize = 256
                 cryptoSettings.symmetric.ivSize = 16 * 8
 
-                cryptoSettings.masterPassword.kdfAlgorithm = "PBKDF2WithHmacSHA512"
+                cryptoSettings.masterPassword.kdfAlgorithm = "PBKDF2WithHmacSHA256"
                 cryptoSettings.masterPassword.kdfIterations = 20000
                 cryptoSettings.masterPassword.passwordSize = 256
 
