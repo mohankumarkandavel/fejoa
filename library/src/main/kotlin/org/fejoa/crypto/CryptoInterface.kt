@@ -19,6 +19,10 @@ interface CryptoInterface {
         return buffer
     }
 
+    fun generateSalt16(): ByteArray {
+        return generateInitializationVector(16 * 8)
+    }
+
     fun generateSalt(): ByteArray {
         return generateInitializationVector(32 * 8)
     }
