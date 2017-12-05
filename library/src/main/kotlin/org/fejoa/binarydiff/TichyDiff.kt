@@ -7,6 +7,7 @@ import org.fejoa.support.OutStream
 import org.fejoa.support.readFully
 import org.rabinfingerprint.fingerprint.RabinFingerprintLongWindowed
 import org.rabinfingerprint.polynomial.Polynomial
+import org.fejoa.support.assert
 import kotlin.math.max
 
 

@@ -22,7 +22,7 @@ interface RandomDataAccess : AsyncInStream, AsyncOutStream {
         }
     }
 
-    fun mode(): Mode
+    val mode: Mode
     fun isOpen(): Boolean
     fun length(): Long
     fun position(): Long

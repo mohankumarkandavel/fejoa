@@ -3,6 +3,7 @@ version '1.0-SNAPSHOT'
 
 //apply plugin: 'org.jetbrains.kotlin.frontend'
 apply plugin: 'kotlin-platform-js'
+apply plugin: 'kotlinx-serialization'
 
 
 // configure kotlin compiler
@@ -29,11 +30,15 @@ kotlin {
 }
 repositories {
     mavenCentral()
+    maven { url "https://kotlin.bintray.com/kotlinx" }
 }
+
 dependencies {
     compile project(":commonJS")
+    compile project(":rabinJS")
     expectedBy project(':library')
     compile "org.jetbrains.kotlin:kotlin-stdlib-js:$kotlin_version"
+    compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$serialization_version"
     testCompile "org.jetbrains.kotlin:kotlin-test-js:$kotlin_version"
     testCompile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
 }

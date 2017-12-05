@@ -4,6 +4,7 @@ import org.fejoa.crypto.CryptoHelper
 import org.fejoa.support.ByteArrayInStream
 import org.fejoa.support.readLong
 import org.fejoa.support.write
+import org.fejoa.support.assert
 
 
 class RingByteBuffer(val capacity: Int) {

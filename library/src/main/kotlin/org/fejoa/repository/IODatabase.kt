@@ -104,7 +104,7 @@ class IODatabaseCC(root: Directory, val objectIndex: ObjectIndex,
                 for (randomDataAccess in openHandles) {
                     if (randomDataAccess === veto)
                         continue
-                    if (!randomDataAccess.mode().has(RandomDataAccess.Mode.WRITE))
+                    if (!randomDataAccess.mode.has(RandomDataAccess.Mode.WRITE))
                         continue
                     randomDataAccess.flush()
                 }
@@ -192,7 +192,7 @@ class IODatabaseCC(root: Directory, val objectIndex: ObjectIndex,
         val paths = ArrayList(openHandles.keys)
         for (path in paths) {
             for (randomDataAccess in getOpenHandles(path)) {
-                if (!randomDataAccess.mode().has(RandomDataAccess.Mode.WRITE))
+                if (!randomDataAccess.mode.has(RandomDataAccess.Mode.WRITE))
                     continue
                 randomDataAccess.flush()
                 treeAccessor.putBlob(path, randomDataAccess.getChunkContainer()!!.ref.hash)

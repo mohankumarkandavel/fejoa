@@ -6,13 +6,14 @@ import kotlin.math.max
 
 
 
-internal class MemoryRandomDataAccess(buffer: ByteArray, val mode: RandomDataAccess.Mode, private val callback: IIOCallback) : RandomDataAccess {
+internal class MemoryRandomDataAccess(buffer: ByteArray, mode: RandomDataAccess.Mode, private val callback: IIOCallback) : RandomDataAccess {
     private var isOpen = true
     var data: ByteArray = buffer
         private set
     private var position = 0
     private var inStream: ByteArrayInStream? = null
     private var outputStream: ByteArrayOutStream? = null
+    override val mode: RandomDataAccess.Mode = mode
 
     internal interface IIOCallback {
         fun onClose(that: MemoryRandomDataAccess)
@@ -97,10 +98,6 @@ internal class MemoryRandomDataAccess(buffer: ByteArray, val mode: RandomDataAcc
         isOpen = false
         flush()
         callback.onClose(this)
-    }
-
-    override fun mode(): RandomDataAccess.Mode {
-        return mode
     }
 }
 

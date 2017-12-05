@@ -7,7 +7,7 @@ import kotlin.math.max
 
 
 class ChunkContainerRandomDataAccess(private var chunkContainer: ChunkContainer,
-                                     val mode: RandomDataAccess.Mode,
+                                     mode: RandomDataAccess.Mode,
                                      private val callback: IOCallback = IOCallback(),
                                      val normalizeChunkSize: Boolean = chunkContainer.ref.boxSpec.dataNormalization)
     : RandomDataAccess {
@@ -15,6 +15,7 @@ class ChunkContainerRandomDataAccess(private var chunkContainer: ChunkContainer,
     private var position: Long = 0
     private var inputStream: ChunkContainerInStream? = null
     private var outputStream: ChunkContainerOutStream? = null
+    override val mode: RandomDataAccess.Mode = mode
 
     open class IOCallback {
         open suspend fun requestRead(caller: ChunkContainerRandomDataAccess) {}
@@ -52,10 +53,6 @@ class ChunkContainerRandomDataAccess(private var chunkContainer: ChunkContainer,
         }
 
         callback.requestWrite(this)
-    }
-
-    override fun mode(): RandomDataAccess.Mode {
-        return mode
     }
 
     suspend private fun prepareForRead() {
