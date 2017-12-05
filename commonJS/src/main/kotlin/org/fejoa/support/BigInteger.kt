@@ -4,6 +4,8 @@ import org.fejoa.jsbindings.bigInt
 
 actual class BigInteger private constructor(private val internalInt: org.fejoa.jsbindings.BigInteger) {
     actual constructor(value: String): this(bigInt(value))
+    actual constructor(value: String, radix: Int): this(bigInt(value, radix))
+
     constructor(argument: Long): this(bigInt(argument.toInt()))
 
     companion object {

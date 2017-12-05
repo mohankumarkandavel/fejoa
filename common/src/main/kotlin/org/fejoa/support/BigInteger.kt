@@ -2,6 +2,7 @@ package org.fejoa.support
 
 expect class BigInteger {
     constructor(value: String)
+    constructor(value: String, radix: Int)
 
     open fun modPow(exp: BigInteger, mod: BigInteger): BigInteger
     open fun add(value: BigInteger): BigInteger
