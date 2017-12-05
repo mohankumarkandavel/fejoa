@@ -1,17 +1,17 @@
 package org.fejoa.support
 
 
-class EOFException : Exception {
+class EOFException : Throwable {
     constructor()
     constructor(message: String) : super(message)
 }
 
-class IOException : Exception {
+class IOException : Throwable {
     constructor()
     constructor(message: String) : super(message)
 }
 
-class FileNotFoundException : Exception {
+class FileNotFoundException : Throwable {
     constructor()
     constructor(message: String) : super(message)
 }
