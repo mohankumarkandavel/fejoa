@@ -8,7 +8,7 @@ import org.fejoa.storage.*
 import org.fejoa.support.*
 
 
-class Commit constructor(var dir: Hash, val hash: Hash) {
+class Commit constructor(var dir: Hash, private val hash: Hash) {
     // |type (1|
     // |Directory ObjectRef|
     // [n parents]
