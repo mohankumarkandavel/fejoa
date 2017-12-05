@@ -137,7 +137,7 @@ class RepositoryTest : RepositoryTestBase() {
         var randomDataAccess: RandomDataAccess? = null
         try {
             randomDataAccess = repository.open("test", RandomDataAccess.Mode.READ)
-        } catch (e: Exception) {
+        } catch (e: IOException) {
 
         }
         // file does not exist
