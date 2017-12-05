@@ -84,8 +84,8 @@ internal open class GetChunkContainerJob(parent: Job?, accessor: ChunkAccessor, 
 }
 
 internal class GetObjectIndexJob(parent: Job?, transaction: ChunkAccessors.Transaction,
-                                 pointer: ChunkContainerRef, val config: RepositoryConfig)
-    : GetChunkContainerJob(parent, transaction.getCommitAccessor(pointer.containerSpec), pointer) {
+                                 indexRef: ChunkContainerRef, val config: RepositoryConfig)
+    : GetChunkContainerJob(parent, transaction.getCommitAccessor(indexRef.containerSpec), indexRef) {
     private var doneCount = 0
     var objectIndex: ObjectIndex? = null
         private set
@@ -102,10 +102,10 @@ internal class GetObjectIndexJob(parent: Job?, transaction: ChunkAccessors.Trans
 }
 
 
-class ChunkFetcher(private val transaction: ChunkAccessors.Transaction, private val fetcherBackend: IFetcherBackend) {
+class ChunkFetcher(private val transaction: ChunkAccessors.Transaction, private val fetcherBackend: FetcherBackend) {
     private var ongoingJobs: MutableList<Job> = ArrayList()
 
-    interface IFetcherBackend {
+    interface FetcherBackend {
         suspend fun fetch(transaction: ChunkTransaction, requestedChunks: List<HashValue>)
     }
 
@@ -116,6 +116,10 @@ class ChunkFetcher(private val transaction: ChunkAccessors.Transaction, private 
             for (job in jobs)
                 requestedChunks.addAll(job.requestedChunks)
         }
+    }
+
+    suspend fun enqueueRepositoryJob(repositoryRef: RepositoryRef) {
+        enqueueJob(GetObjectIndexJob(null, transaction, repositoryRef.objectIndexRef, repositoryRef.config))
     }
 
     suspend fun enqueueObjectIndexJob(objectIndex: ObjectIndex) {
@@ -151,7 +155,7 @@ class ChunkFetcher(private val transaction: ChunkAccessors.Transaction, private 
 
         fun createLocalFetcher(targetTransaction: ChunkAccessors.Transaction,
                                source: ChunkTransaction): ChunkFetcher {
-            return ChunkFetcher(targetTransaction, object : IFetcherBackend {
+            return ChunkFetcher(targetTransaction, object : FetcherBackend {
                 override suspend fun fetch(target: ChunkTransaction, requestedChunks: List<HashValue>) {
                     for (requestedChunk in requestedChunks) {
                         val buffer = source.getChunk(requestedChunk).await()

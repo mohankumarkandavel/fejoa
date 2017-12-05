@@ -1,11 +1,11 @@
 package org.fejoa.repository
 
-import kotlinx.io.IOException
+import org.fejoa.support.IOException
 import org.fejoa.support.assert
 
 
 object CommonAncestorsFinder {
-    // List string of following commits. If a commit has multiple parent only one parent is followed.
+    // Chain of consecutive commits. If a commit has multiple parent only one parent is followed.
     class SingleCommitChain {
         var commits: MutableList<Commit> = ArrayList()
         var reachedFirstCommit = false
@@ -144,5 +144,13 @@ object CommonAncestorsFinder {
         }
 
         return results
+    }
+
+    suspend fun collectAllChains(local: CommitCache, localCommit: Commit): Chains {
+        val chains = Chains()
+        val startCommitChain = SingleCommitChain(localCommit)
+        chains.chains.add(startCommitChain)
+        loadCommits(local, startCommitChain, Int.MAX_VALUE, chains)
+        return chains
     }
 }
