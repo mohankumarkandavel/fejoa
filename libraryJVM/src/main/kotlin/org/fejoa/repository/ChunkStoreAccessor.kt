@@ -9,7 +9,10 @@ fun ChunkStore.Transaction.toChunkTransaction(): ChunkTransaction {
     val transaction = this
     return object: ChunkTransaction {
         override fun getChunk(boxHash: HashValue): Future<ByteArray> {
-            return Future.completedFuture(transaction.getChunk(boxHash))
+            val chunk = transaction.getChunk(boxHash)
+            if (chunk == null)
+                return Future.failedFuture("Failed to read chunk: $boxHash")
+            return Future.completedFuture(chunk)
         }
         override fun putChunk(data: ByteArray): Future<PutResult<HashValue>> {
             return Future.completedFuture(transaction.put(data))
