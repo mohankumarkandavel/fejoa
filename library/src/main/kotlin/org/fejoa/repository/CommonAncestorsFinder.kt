@@ -128,8 +128,6 @@ object CommonAncestorsFinder {
      */
     suspend fun find(local: CommitCache, localCommit: Commit,
              others: CommitCache, othersCommit: Commit): Chains {
-        assert(localCommit != null)
-        assert(othersCommit != null)
         val loadCommitsNumber = 3
 
         val localChains = Chains()
