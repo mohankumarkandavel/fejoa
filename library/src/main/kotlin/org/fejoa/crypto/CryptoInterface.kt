@@ -5,7 +5,7 @@ import kotlin.math.min
 
 
 interface CryptoInterface {
-    fun deriveKey(secret: String, salt: ByteArray, algorithm: String, keyLength: Int, iterations: Int)
+    fun deriveKey(secret: String, salt: ByteArray, algorithm: CryptoSettings.KDF_ALGO, keyLength: Int, iterations: Int)
             : Future<SecretKey>
 
     fun generateKeyPair(settings: CryptoSettings.KeyTypeSettings): Future<KeyPair>
@@ -52,8 +52,8 @@ interface CryptoInterface {
     fun verifySignature(message: ByteArray, signature: ByteArray, key: PublicKey, settings: CryptoSettings.Signature)
             : Future<Boolean>
 
-    fun secretKeyFromRaw(key: ByteArray, keySizeBytes: Int, algorithm: String): Future<SecretKey>
-    fun secretKeyFromRaw(key: ByteArray, algorithm: String): Future<SecretKey> {
+    fun secretKeyFromRaw(key: ByteArray, keySizeBytes: Int, algorithm: CryptoSettings.KEY_TYPE): Future<SecretKey>
+    fun secretKeyFromRaw(key: ByteArray, algorithm: CryptoSettings.KEY_TYPE): Future<SecretKey> {
         return secretKeyFromRaw(key, key.size, algorithm)
     }
     fun secretKeyFromRaw(key: ByteArray, settings: CryptoSettings.KeyTypeSettings): Future<SecretKey> {

@@ -79,9 +79,11 @@ class BCCryptoInterfaceTest {
             // test if kdf gives the same value twice
             val password = "testPassword348#"
             val salt = cryptoInterface.generateSalt()
-            val kdfKey1 = cryptoInterface.deriveKey(password, salt, settings.masterPassword.kdfAlgorithm, 20000, 256).await()
+            val kdfKey1 = cryptoInterface.deriveKey(password, salt, settings.masterPassword.kdfAlgorithm,
+                    20000, 256).await()
             assertEquals(32, cryptoInterface.encode(kdfKey1).await().size)
-            val kdfKey2 = cryptoInterface.deriveKey(password, salt, settings.masterPassword.kdfAlgorithm, 20000, 256).await()
+            val kdfKey2 = cryptoInterface.deriveKey(password, salt, settings.masterPassword.kdfAlgorithm,
+                    20000, 256).await()
             assertTrue(cryptoInterface.encode(kdfKey1).await() contentEquals
                     cryptoInterface.encode(kdfKey2).await())
         }

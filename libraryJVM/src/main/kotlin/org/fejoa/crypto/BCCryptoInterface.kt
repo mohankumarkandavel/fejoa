@@ -21,8 +21,8 @@ import javax.crypto.spec.SecretKeySpec
 
 
 class BCCryptoInterface : CryptoInterface {
-    internal class JavaSecurityRestrictionRemover// Based on http://stackoverflow.com/questions/1179672/how-to-avoid-installing-unlimited-strength-jce-policy-files-when-deploying-an
-    constructor() {
+    internal class JavaSecurityRestrictionRemover {
+        // Based on http://stackoverflow.com/questions/1179672/how-to-avoid-installing-unlimited-strength-jce-policy-files-when-deploying-an
 
         private// This simply matches the Oracle JRE, but not OpenJDK.
         val isRestrictedCryptography: Boolean
@@ -77,10 +77,11 @@ class BCCryptoInterface : CryptoInterface {
     }
 
     @Throws(CryptoException::class)
-    override fun deriveKey(secret: String, salt: ByteArray, algorithm: String, iterations: Int, keyLength: Int): Future<SecretKey> {
+    override fun deriveKey(secret: String, salt: ByteArray, algorithm: CryptoSettings.KDF_ALGO, iterations: Int,
+                           keyLength: Int): Future<SecretKey> {
         return async {
             try {
-                val factory = SecretKeyFactory.getInstance(algorithm)
+                val factory = SecretKeyFactory.getInstance(algorithm.javaName)
                 val spec = PBEKeySpec(secret.toCharArray(), salt, iterations, keyLength)
                 return@async SecreteKeyJVM(factory.generateSecret(spec))
             } catch (e: Exception) {
@@ -93,12 +94,12 @@ class BCCryptoInterface : CryptoInterface {
     override fun generateKeyPair(settings: CryptoSettings.KeyTypeSettings): Future<KeyPair> {
         val keyGen: KeyPairGenerator
         try {
-            if (settings.keyType!!.startsWith("ECIES")) {
+            if (settings.keyType.name.startsWith("ECIES")) {
                 keyGen = KeyPairGenerator.getInstance("ECIES")
-                val curve = settings.keyType!!.substring("ECIES/".length)
+                val curve = settings.keyType.name.substring("ECIES/".length)
                 keyGen.initialize(ECGenParameterSpec(curve))
             } else {
-                keyGen = KeyPairGenerator.getInstance(settings.keyType)
+                keyGen = KeyPairGenerator.getInstance(settings.keyType.javaName)
                 keyGen.initialize(settings.keySize, SecureRandom())
             }
         } catch (e: Exception) {
@@ -115,7 +116,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val cipher: Cipher
             try {
-                cipher = Cipher.getInstance(settings.algorithm!!)
+                cipher = Cipher.getInstance(settings.algorithm.javaName)
                 cipher.init(Cipher.ENCRYPT_MODE, (key as PublicKeyJVM).key)
                 return@async cipher.doFinal(input)
             } catch (e: Exception) {
@@ -129,7 +130,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val cipher: Cipher
             try {
-                cipher = Cipher.getInstance(settings.algorithm!!)
+                cipher = Cipher.getInstance(settings.algorithm.javaName)
                 cipher.init(Cipher.DECRYPT_MODE, (key as PrivateKeyJVM).key)
                 return@async cipher.doFinal(input)
             } catch (e: Exception) {
@@ -142,7 +143,7 @@ class BCCryptoInterface : CryptoInterface {
     override fun generateSymmetricKey(settings: CryptoSettings.KeyTypeSettings): Future<SecretKey> {
         val keyGenerator: KeyGenerator
         try {
-            keyGenerator = KeyGenerator.getInstance(settings.keyType)
+            keyGenerator = KeyGenerator.getInstance(settings.keyType.javaName)
         } catch (e: Exception) {
             throw CryptoException(e.message)
         }
@@ -156,7 +157,7 @@ class BCCryptoInterface : CryptoInterface {
                          settings: CryptoSettings.Symmetric): Future<ByteArray> {
         return async {
             try {
-                val cipher = Cipher.getInstance(settings.algorithm!!)
+                val cipher = Cipher.getInstance(settings.algorithm.javaName)
                 val ips = IvParameterSpec(iv)
                 cipher.init(Cipher.ENCRYPT_MODE, (secretKey as SecreteKeyJVM).key, ips)
                 return@async cipher.doFinal(input)
@@ -171,7 +172,7 @@ class BCCryptoInterface : CryptoInterface {
                          settings: CryptoSettings.Symmetric): Future<ByteArray> {
         return async {
             try {
-                val cipher = Cipher.getInstance(settings.algorithm!!)
+                val cipher = Cipher.getInstance(settings.algorithm.javaName)
                 val ips = IvParameterSpec(iv)
                 cipher.init(Cipher.DECRYPT_MODE, (secretKey as SecreteKeyJVM).key, ips)
                 return@async cipher.doFinal(input)
@@ -233,7 +234,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val signature: Signature
             try {
-                signature = java.security.Signature.getInstance(settings.algorithm!!)
+                signature = java.security.Signature.getInstance(settings.algorithm.javaName)
                 signature.initSign((key as PrivateKeyJVM).key as java.security.PrivateKey)
                 signature.update(input)
                 return@async signature.sign()
@@ -249,7 +250,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val sig: Signature
             try {
-                sig = java.security.Signature.getInstance(settings.algorithm)
+                sig = java.security.Signature.getInstance(settings.algorithm.javaName)
                 sig.initVerify((key as PublicKeyJVM).key as java.security.PublicKey)
                 sig.update(message)
                 return@async sig.verify(signature)
@@ -269,8 +270,9 @@ class BCCryptoInterface : CryptoInterface {
         return completedFuture((key as KeyJVM).toByteArray())
     }
 
-    override fun secretKeyFromRaw(key: ByteArray, keySizeBytes: Int, algorithm: String): Future<SecretKey> {
-        return completedFuture(SecreteKeyJVM(SecretKeySpec(key, 0, keySizeBytes, algorithm)))
+    override fun secretKeyFromRaw(key: ByteArray, keySizeBytes: Int, algorithm: CryptoSettings.KEY_TYPE)
+            : Future<SecretKey> {
+        return completedFuture(SecreteKeyJVM(SecretKeySpec(key, 0, keySizeBytes, algorithm.javaName)))
     }
 
     private fun getKeyFactory(keyType: String): KeyFactory {
