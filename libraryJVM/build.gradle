@@ -14,7 +14,7 @@ dependencies {
     expectedBy project(":library")
     testCompile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile group: 'org.bouncycastle', name: 'bcpg-jdk15on', version: '1.55'
+    compile group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.58'
 
     compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version"
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"

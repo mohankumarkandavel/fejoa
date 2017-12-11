@@ -2,23 +2,24 @@ package org.fejoa.crypto
 
 
 class CryptoSettings private constructor() {
-    enum class SIGN_ALGO(val javaName: String, val jsName: String) {
-        SHA256withECDSA("SHA256withECDSA", ""),
-        SHA1withRSA("SHA1withRSA", "")
+    enum class SIGN_ALGO(val javaName: String, val jsName: String, val hash: HASH_TYPE = HASH_TYPE.SHA256) {
+        ECDSA_SHA256("SHA256withECDSA", "", HASH_TYPE.SHA256),
+        RSASSA_PKCS1_v1_5("SHA256withRSA", "RSASSA-PKCS1-v1_5", HASH_TYPE.SHA256)
     }
 
-    enum class ASYM_ALGO(val javaName: String, val jsName: String) {
-        ECIES("ECIES", ""),
-        RSA_NONE_PKCS1PADDING("RSA/NONE/PKCS1PADDING", "")
+    enum class ASYM_ALGO(val javaName: String, val jsName: String, val hash: HASH_TYPE = HASH_TYPE.SHA256) {
+        ECIES("ECIES", "-"),
+        RSA_OAEP_SHA256("RSA/NONE/OAEPWithSHA256AndMGF1Padding", "RSA-OAEP", HASH_TYPE.SHA256),
     }
 
     enum class SYM_ALGO(val javaName: String, val jsName: String) {
         AES_CTR("AES/CTR/NoPadding", "AES-CTR")
     }
 
-    enum class KEY_TYPE(val javaName: String, val jsName: String) {
+    enum class KEY_TYPE(val javaName: String, val jsName: String, val curve: String = "-") {
         AES("AES", "AES"),
-        ECIES_secp256r1("ECIES/secp256r1", ""),
+        ECIES_SECP256R1("ECIES/secp256r1", "-", "P-256"),
+        ECDSA_SECP256R1("ECDSA/secp256r1", "ECDSA", "P-256"),
         RSA("RSA", "")
     }
 
@@ -27,7 +28,7 @@ class CryptoSettings private constructor() {
     }
 
     enum class KDF_ALGO(val javaName: String, val jsName: String, val hash: HASH_TYPE) {
-        PBKDF2("PBKDF2WithHmacSHA256", "PBKDF2", HASH_TYPE.SHA256)
+        PBKDF2_SHA256("PBKDF2WithHmacSHA256", "PBKDF2", HASH_TYPE.SHA256)
     }
 
     var masterPassword = Password()
@@ -42,7 +43,7 @@ class CryptoSettings private constructor() {
 
     class Password {
         // kdf
-        var kdfAlgorithm: KDF_ALGO = KDF_ALGO.PBKDF2
+        var kdfAlgorithm: KDF_ALGO = KDF_ALGO.PBKDF2_SHA256
         var kdfIterations = -1
         var passwordSize = -1
     }
@@ -53,31 +54,31 @@ class CryptoSettings private constructor() {
     }
 
     class Asymmetric : KeyTypeSettings() {
-        var algorithm: ASYM_ALGO = ASYM_ALGO.RSA_NONE_PKCS1PADDING
+        var algorithm: ASYM_ALGO = ASYM_ALGO.RSA_OAEP_SHA256
     }
 
     class Signature : KeyTypeSettings() {
-        var algorithm: SIGN_ALGO = SIGN_ALGO.SHA1withRSA
+        var algorithm: SIGN_ALGO = SIGN_ALGO.RSASSA_PKCS1_v1_5
     }
 
     companion object {
 
         fun setDefaultEC(cryptoSettings: CryptoSettings) {
             cryptoSettings.publicKey.algorithm = ASYM_ALGO.ECIES
-            cryptoSettings.publicKey.keyType = KEY_TYPE.ECIES_secp256r1
+            cryptoSettings.publicKey.keyType = KEY_TYPE.ECIES_SECP256R1
             cryptoSettings.publicKey.keySize = 0
 
-            cryptoSettings.signature.algorithm = SIGN_ALGO.SHA256withECDSA
-            cryptoSettings.signature.keyType = KEY_TYPE.ECIES_secp256r1
+            cryptoSettings.signature.algorithm = SIGN_ALGO.ECDSA_SHA256
+            cryptoSettings.signature.keyType = KEY_TYPE.ECDSA_SECP256R1
             cryptoSettings.signature.keySize = 0
         }
 
         fun setDefaultRSA(cryptoSettings: CryptoSettings) {
-            cryptoSettings.publicKey.algorithm = ASYM_ALGO.RSA_NONE_PKCS1PADDING
+            cryptoSettings.publicKey.algorithm = ASYM_ALGO.RSA_OAEP_SHA256
             cryptoSettings.publicKey.keyType = KEY_TYPE.RSA
             cryptoSettings.publicKey.keySize = 2048
 
-            cryptoSettings.signature.algorithm = SIGN_ALGO.SHA1withRSA
+            cryptoSettings.signature.algorithm = SIGN_ALGO.RSASSA_PKCS1_v1_5
             cryptoSettings.signature.keyType = KEY_TYPE.RSA
             cryptoSettings.signature.keySize = 2048
         }
@@ -93,7 +94,7 @@ class CryptoSettings private constructor() {
                 cryptoSettings.symmetric.keySize = 256
                 cryptoSettings.symmetric.ivSize = 16 * 8
 
-                cryptoSettings.masterPassword.kdfAlgorithm = KDF_ALGO.PBKDF2
+                cryptoSettings.masterPassword.kdfAlgorithm = KDF_ALGO.PBKDF2_SHA256
                 cryptoSettings.masterPassword.kdfIterations = 20000
                 cryptoSettings.masterPassword.passwordSize = 256
 

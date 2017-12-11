@@ -21,6 +21,13 @@ import javax.crypto.spec.SecretKeySpec
 
 
 class BCCryptoInterface : CryptoInterface {
+
+    companion object {
+        // enable “Unlimited Strength” JCE policy
+        // This is necessary to use AES256!
+        private val remover = JavaSecurityRestrictionRemover()
+    }
+
     internal class JavaSecurityRestrictionRemover {
         // Based on http://stackoverflow.com/questions/1179672/how-to-avoid-installing-unlimited-strength-jce-policy-files-when-deploying-an
 
@@ -182,59 +189,12 @@ class BCCryptoInterface : CryptoInterface {
         }
     }
 
-    /*
-    @Throws(CryptoException::class)
-    override fun encryptSymmetric(in: InputStream, secretKey: SecretKey, iv: ByteArray,
-                         settings: CryptoSettings.Symmetric): Future<InputStream> {
-        return async {
-            try {
-                val cipher = Cipher.getInstance(settings.algorithm!!)
-                val ips = IvParameterSpec(iv)
-                cipher.init(Cipher.ENCRYPT_MODE, secretKey, ips)
-                return@async CipherInputStream(`in`, cipher)
-            } catch (e: Exception) {
-                throw CryptoException(e.message)
-            }
-        }
-    }
-
-    @Throws(CryptoException::class)
-    override fun encryptSymmetric(out: OutputStream, secretKey: SecretKey, iv: ByteArray,
-                         settings: CryptoSettings.Symmetric): Future<OutputStream> {
-        return async {
-            try {
-                val cipher = Cipher.getInstance(settings.algorithm!!)
-                val ips = IvParameterSpec(iv)
-                cipher.init(Cipher.ENCRYPT_MODE, secretKey, ips)
-                return@async CipherOutputStream(out, cipher)
-            } catch (e: Exception) {
-                throw CryptoException(e.message)
-            }
-        }
-    }
-
-    @Throws(CryptoException::class)
-    override fun decryptSymmetric(in: InputStream, secretKey: SecretKey, iv: ByteArray,
-                         settings: CryptoSettings.Symmetric): Future<InputStream> {
-        return async {
-            try {
-                val cipher = Cipher.getInstance(settings.algorithm!!)
-                val ips = IvParameterSpec(iv)
-                cipher.init(Cipher.DECRYPT_MODE, secretKey, ips)
-                return@async CipherInputStream(in, cipher)
-            } catch (e: Exception) {
-                throw CryptoException(e.message)
-            }
-        }
-    }
-    */
-
     @Throws(CryptoException::class)
     override fun sign(input: ByteArray, key: PrivateKey, settings: CryptoSettings.Signature): Future<ByteArray> {
         return async {
             val signature: Signature
             try {
-                signature = java.security.Signature.getInstance(settings.algorithm.javaName)
+                signature = Signature.getInstance(settings.algorithm.javaName)
                 signature.initSign((key as PrivateKeyJVM).key as java.security.PrivateKey)
                 signature.update(input)
                 return@async signature.sign()
@@ -250,7 +210,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val sig: Signature
             try {
-                sig = java.security.Signature.getInstance(settings.algorithm.javaName)
+                sig = Signature.getInstance(settings.algorithm.javaName)
                 sig.initVerify((key as PublicKeyJVM).key as java.security.PublicKey)
                 sig.update(message)
                 return@async sig.verify(signature)
@@ -258,12 +218,6 @@ class BCCryptoInterface : CryptoInterface {
                 throw CryptoException(e.message)
             }
         }
-    }
-
-    companion object {
-        // enable “Unlimited Strength” JCE policy
-        // This is necessary to use AES256!
-        private val remover = JavaSecurityRestrictionRemover()
     }
 
     override fun encode(key: Key): Future<ByteArray> {
