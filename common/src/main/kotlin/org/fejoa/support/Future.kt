@@ -22,9 +22,15 @@ class Future<T>(executor: Executor = NowExecutor(), private val task: (() -> T)?
                 private val cancelCallback: (() -> Unit)? = null) {
     companion object {
         fun <T>completedFuture(value: T): Future<T> {
-            val promise = Future<T>()
-            promise.setResult(value)
-            return promise
+            val future = Future<T>()
+            future.setResult(value)
+            return future
+        }
+
+        fun <T>failedFuture(message: String): Future<T> {
+            val future = Future<T>()
+            future.setError(Exception(message))
+            return future
         }
     }
 
@@ -216,10 +222,10 @@ class Future<T>(executor: Executor = NowExecutor(), private val task: (() -> T)?
 
 suspend fun <T> Future<T>.await() = suspendCoroutine<T> { cont ->
     whenCompleted({value, exception ->
-        if (value != null)
-            cont.resume(value)
         if (exception != null)
             cont.resumeWithException(exception)
+        else // cast to T in case T is nullable and is actually null
+            cont.resume(value as T)
     })
 }
 
