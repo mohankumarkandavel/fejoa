@@ -1,4 +1,4 @@
-rootProject.name = 'LoginChrome'
+rootProject.name = 'Fejoa'
 
 include ":chunkstoreJVM"
 include ":common"
