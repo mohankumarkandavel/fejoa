@@ -32,7 +32,7 @@ class ChunkInfo(val box: HashValue, val data: HashValue, val iv: ByteArray, var 
 
 fun ChunkContainer.chunkIterator(ccOrigin: ChunkInfo.CCOrigin): AsyncIterator<ChunkInfo> {
     var hashes = ArrayList<ChunkInfo>()
-    val ongoingNodes = ArrayList<ChunkContainerNode>()
+    val ongoingNodes: MutableList<ChunkContainerNode> = ArrayList()
     ongoingNodes += this
     return object : AsyncIterator<ChunkInfo> {
         private fun add(node: ChunkContainerNode) {
@@ -79,10 +79,10 @@ fun ChunkContainer.chunkIterator(ccOrigin: ChunkInfo.CCOrigin): AsyncIterator<Ch
 }
 
 
-suspend fun Repository.chunkIterator(): AsyncIterator<ChunkInfo> {
+suspend fun ObjectIndex.chunkIterator(): AsyncIterator<ChunkInfo> {
     val hashes = CombinedIterator<ChunkInfo>()
-    hashes.add(objectIndex.chunkContainer.chunkIterator(ChunkInfo.CCOrigin.OBJECT_INDEX))
-    val ongoing = objectIndex.listChunkContainers().iterator()
+    hashes.add(this.chunkContainer.chunkIterator(ChunkInfo.CCOrigin.OBJECT_INDEX))
+    val ongoing = this.listChunkContainers().iterator()
     return object : AsyncIterator<ChunkInfo> {
         suspend override fun hasNext(): Boolean {
             if (hashes.hasNext())
@@ -98,7 +98,7 @@ suspend fun Repository.chunkIterator(): AsyncIterator<ChunkInfo> {
                 id.startsWith(ObjectIndex.BLOB_ID) -> ChunkInfo.CCOrigin.BLOB
                 else -> throw Exception("Unknown id type: $id")
             }
-            val container = ChunkContainer.read(objectIndex.getChunkAccessor(ref), ref)
+            val container = ChunkContainer.read(getChunkAccessor(ref), ref)
             hashes.add(container.chunkIterator(type))
             return hashes.hasNext()
         }
@@ -107,6 +107,10 @@ suspend fun Repository.chunkIterator(): AsyncIterator<ChunkInfo> {
             return hashes.next()
         }
     }
+}
+
+suspend fun Repository.chunkIterator(): AsyncIterator<ChunkInfo> {
+    return objectIndex.chunkIterator()
 }
 
 suspend fun Repository.gc(target: ChunkTransaction) {
