@@ -63,9 +63,9 @@ data class BoxSpec(val encInfo: EncryptionInfo = EncryptionInfo(),
     // {extension (optional} (indicated through MSB in Config; not implemented)
     companion object {
         private val ZIP_TYPE_MASK = 0x7
-        private val ZIP_ORDER_MASK = 1 shr 3
-        private val NODE_NORM_MASK = 1 shr 4
-        private val DATA_NORM_MASK = 1 shr 5
+        private val ZIP_ORDER_MASK = 1 shl 3
+        private val NODE_NORM_MASK = 1 shl 4
+        private val DATA_NORM_MASK = 1 shl 5
 
         suspend fun read(inStream: AsyncInStream): BoxSpec {
             val encInfo = EncryptionInfo.read(inStream)
