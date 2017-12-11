@@ -1,14 +1,13 @@
 package org.fejoa.support
 
 
-interface AsyncOutStream {
+interface AsyncOutStream : AsyncCloseable {
     suspend fun write(buffer: ByteArray): Int {
         return write(buffer, 0, buffer.size)
     }
 
     suspend fun write(buffer: ByteArray, offset: Int, length: Int): Int
     suspend fun flush() {}
-    suspend fun close() {}
 }
 
 suspend fun AsyncOutStream.write(byte: Int): Int {

@@ -1,7 +1,7 @@
 package org.fejoa.support
 
 
-class AsyncByteArrayOutStream : AsyncOutStream {
+open class AsyncByteArrayOutStream : AsyncOutStream {
     private val output = ByteArrayOutStream()
 
     suspend override fun write(buffer: ByteArray, offset: Int, length: Int): Int {

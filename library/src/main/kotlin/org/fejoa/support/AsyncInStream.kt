@@ -1,7 +1,7 @@
 package org.fejoa.support
 
 
-interface AsyncInStream {
+interface AsyncInStream : AsyncCloseable {
     suspend fun read(buffer: ByteArray): Int {
         return read(buffer, 0, buffer.size)
     }
