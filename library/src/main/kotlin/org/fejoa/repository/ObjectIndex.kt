@@ -411,7 +411,7 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
         return putChunkContainer("$BLOB_ID$path", data)
     }
 
-    suspend fun getCommitChunkContainer(hash: Hash): ChunkContainer? {
+    suspend fun getCommit(hash: Hash): ChunkContainer? {
         return getChunkContainer(COMMIT_ID, hash)
     }
 
@@ -423,12 +423,33 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
         return putChunkContainer(COMMIT_ID, commit)
     }
 
-    suspend fun getDirChunkContainer(hash: Hash): ChunkContainer? {
+    suspend fun getDirectory(hash: Hash): ChunkContainer? {
         return getChunkContainer(TREE_ID, hash)
     }
 
     suspend fun putDir(dir: ChunkContainer): Hash {
         return putChunkContainer(TREE_ID, dir)
+    }
+
+    /**
+     * Gets the internal storage container that contains the hash
+     */
+    suspend private fun getStorageContainer(path: String, hash: Hash): ChunkContainerRef? {
+        val entryRefList = entries.get(path) ?: return null
+        val entryRef = entryRefList.getRefFor(hash) ?: return null
+        return entryRef.containerRef
+    }
+
+    suspend fun getBlobStorageContainer(path: String, hash: Hash): ChunkContainerRef? {
+        return getStorageContainer("$BLOB_ID$path", hash)
+    }
+
+    suspend fun getDirectoryStorageContainer(hash: Hash): ChunkContainerRef? {
+        return getStorageContainer(TREE_ID, hash)
+    }
+
+    suspend fun getCommitStorageContainer(hash: Hash): ChunkContainerRef? {
+        return getStorageContainer(COMMIT_ID, hash)
     }
 
     suspend private fun getEntries(path: String): List<Hash> {

@@ -9,9 +9,9 @@ import org.fejoa.support.Future
 
 
 @Serializable
-class BranchLogEntry(val time: Long,
+class BranchLogEntry(val time: Long = 0L,
                      var entryId: HashValue = Config.newDataHash(),
-                     var message: String,
+                     var message: String = "",
                      @Optional
                      val changes: MutableList<HashValue> = ArrayList())
 

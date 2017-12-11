@@ -93,7 +93,7 @@ class Directory(nameAttrData: NameAttrData, hash: Hash) : DirectoryEntry(DIR, na
 
     companion object {
         suspend fun readRoot(hash: Hash, objectIndex: ObjectIndex): Directory {
-            val container = objectIndex.getDirChunkContainer(hash)
+            val container = objectIndex.getDirectory(hash)
                     ?: throw Exception("Can't find dir ${hash.value}")
             val root = readRoot(ChunkContainerInStream(container), hash.spec.createChild())
             if (hash.value != root.hash())

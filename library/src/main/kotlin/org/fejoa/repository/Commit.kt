@@ -24,12 +24,12 @@ class Commit constructor(var dir: Hash, private val hash: Hash) {
 
     companion object {
         suspend fun read(hash: Hash, objectIndex: ObjectIndex): Commit {
-            val container = objectIndex.getCommitChunkContainer(hash)
+            val container = objectIndex.getCommit(hash)
                     ?: throw Exception("Can't find commit ${hash.value}")
-            return read(ChunkContainerInStream(container), hash.spec.createChild())
+            return read(ChunkContainerInStream(container), hash.spec.createChild(), hash)
         }
 
-        suspend private fun read(inStream: AsyncInStream, parent: HashSpec): Commit {
+        suspend private fun read(inStream: AsyncInStream, parent: HashSpec, expectedHash: Hash): Commit {
             val type = inStream.readByte().toInt()
             if (type != CommitType.COMMIT_V1.value)
                 throw Exception("Unexpected commit type; $type")
@@ -42,6 +42,8 @@ class Commit constructor(var dir: Hash, private val hash: Hash) {
                 commit.parents += Hash.read(inStream, parent)
             }
             commit.message = inStream.readVarIntDelimited().first
+            if (commit.getHash() != expectedHash)
+                throw Exception("Expected hash: ${expectedHash.value}, read hash: ${commit.getHash()}")
             return commit
         }
     }

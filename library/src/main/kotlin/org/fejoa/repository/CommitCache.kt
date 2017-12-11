@@ -5,7 +5,7 @@ import org.fejoa.chunkcontainer.Hash
 
 class CommitCache(private val repository: Repository) {
     private val commitCache = HashMap<Hash, Commit>()
-    private val queue = ArrayList<Hash>()
+    private val queue: MutableList<Hash> = ArrayList()
     private val MAX_ENTRIES = 50
 
     /**

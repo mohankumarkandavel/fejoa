@@ -5,7 +5,11 @@ import org.fejoa.support.assert
 
 
 object CommonAncestorsFinder {
-    // Chain of consecutive commits. If a commit has multiple parent only one parent is followed.
+    /**
+     * Chain of consecutive commits. If a commit has multiple parent only one parent is followed.
+     *
+     * The first entry is the "head" of the chain.
+     */
     class SingleCommitChain {
         var commits: MutableList<Commit> = ArrayList()
         var reachedFirstCommit = false
@@ -32,6 +36,8 @@ object CommonAncestorsFinder {
         // make the chain terminate with the commonAncestor
         fun truncate(commonAncestor: Commit) {
             val index = commits.indexOf(commonAncestor)
+            if (index < 0)
+                return
             while (commits.size > index + 1)
                 commits.removeAt(index + 1)
         }
@@ -107,7 +113,18 @@ object CommonAncestorsFinder {
     }
 
     /**
-     * @return all commit chains that lead to common ancestors
+     * Find all commit chains starting from othersCommit that lead to common ancestors
+     *
+     * @return the chains that lead to the common ancestors. These chains include the common ancestors.
+     *
+     * For example:
+     * Local (c2) and chain c0 -> c1 -> c2
+     * Other (o2) and the chains
+     *      c0 -> c1 -> o0 -> o2
+     *      c0 -> c1 -> o1 -> o2
+     * The chains starting from o2 to the common ancestor c1 are:
+     *      c1 -> o0 -> o2
+     *      c1 -> o1 -> o2
      */
     suspend fun find(local: CommitCache, localCommit: Commit,
              others: CommitCache, othersCommit: Commit): Chains {

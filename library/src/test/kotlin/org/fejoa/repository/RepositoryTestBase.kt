@@ -42,6 +42,11 @@ open class RepositoryTestBase : ChunkContainerTestBase() {
         assertEquals(content.size, countFiles(database, ""))
     }
 
+    suspend protected fun openRepo(dirName: String, branch: String, repositoryRef: RepositoryRef): Repository {
+        val storage = prepareStorage(dirName, branch)
+        return Repository.open(branch, repositoryRef, storage,  SymCredentials(secretKey!!, settings.symmetric))
+    }
+
     suspend protected fun createRepo(dirName: String, branch: String): Repository {
         val storage = prepareStorage(dirName, branch)
         return Repository.create(branch, storage, getRepoConfig(),  SymCredentials(secretKey!!, settings.symmetric))

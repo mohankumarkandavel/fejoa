@@ -201,7 +201,12 @@ class Repository private constructor(private val branch: String,
             if (singleResult == Database.MergeResult.MERGED)
                 result = singleResult
         }
-        this.mergeParents.addAll(mergeParents.map { it.getHead() })
+        if (result == Database.MergeResult.FAST_FORWARD) {
+            val repoRef = (mergeParents.first() as Repository).getRepositoryRef()
+            log.add(branchLogIO.logHash(repoRef),
+                    branchLogIO.writeToLogString(repoRef), transaction.getObjectsWritten())
+        } else
+            this.mergeParents.addAll(mergeParents.map { it.getHead() })
         return result
     }
 
@@ -324,10 +329,13 @@ class Repository private constructor(private val branch: String,
         writeTree(ioDatabase.getRootDirectory())
         // write the rootTree to the object index
         val commit = Commit(rootTree, Hash.createChild(config.hashSpec))
+
         if (headCommit != null)
             commit.parents.add(headCommit!!.getHash())
+
         for (mergeParent in mergeParents)
             commit.parents.add(mergeParent)
+
         if (commitSignature != null)
             commit.message = commitSignature.signMessage(message, rootTree.value, getParents())
         else
