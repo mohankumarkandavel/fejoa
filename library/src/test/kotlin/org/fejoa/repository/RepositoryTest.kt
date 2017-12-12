@@ -5,7 +5,7 @@ import kotlinx.coroutines.experimental.runBlocking
 import org.fejoa.chunkcontainer.*
 import org.fejoa.crypto.CryptoHelper
 import org.fejoa.crypto.CryptoSettings
-import org.fejoa.crypto.SymCredentials
+import org.fejoa.crypto.SymBaseCredentials
 import org.fejoa.storage.*
 import org.fejoa.support.*
 import kotlin.test.Test
@@ -63,7 +63,7 @@ class RepositoryTest : RepositoryTestBase() {
         repoConfig.hashSpec.setFixedSizeChunking(500)
 
         var repository = Repository.create(branch, storage, repoConfig,
-                SymCredentials(secretKey!!, settings.symmetric))
+                SymBaseCredentials(secretKey!!, settings.symmetric))
 
         repository.putBytes("test", "test".toUTF())
         assertTrue(repository.readBytes("test") contentEquals "test".toUTF())
@@ -83,7 +83,7 @@ class RepositoryTest : RepositoryTestBase() {
         var repository = createRepo(dirName, branch)
         val storage = repository.branchBackend
         val repoConfig = repository.config
-        val symCredentials = SymCredentials(secretKey!!, settings.symmetric)
+        val symCredentials = SymBaseCredentials(secretKey!!, settings.symmetric)
 
         val content = HashMap<String, DatabaseStringEntry>()
         add(repository, content, DatabaseStringEntry("file1", "file1"))

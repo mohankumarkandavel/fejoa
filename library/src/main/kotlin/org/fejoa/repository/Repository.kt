@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialId
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoBuf
 import org.fejoa.chunkcontainer.*
-import org.fejoa.crypto.SymCredentials
+import org.fejoa.crypto.SymBaseCredentials
 import org.fejoa.protocolbufferlight.ProtocolBufferLight
 import org.fejoa.storage.*
 import org.fejoa.support.*
@@ -113,7 +113,7 @@ class Repository private constructor(private val branch: String,
                                      val log: BranchLog,
                                      val objectIndex: ObjectIndex,
                                      val config: RepositoryConfig,
-                                     val crypto: SymCredentials?): Database {
+                                     val crypto: SymBaseCredentials?): Database {
     private var transaction: LogRepoTransaction = LogRepoTransaction(transaction)
     private var headCommit: Commit? = null
     val commitCache = CommitCache(this)
@@ -130,7 +130,7 @@ class Repository private constructor(private val branch: String,
 
     companion object {
         fun create(branch: String, branchBackend: StorageBackend.BranchBackend, config: RepositoryConfig,
-                   crypto: SymCredentials?): Repository {
+                   crypto: SymBaseCredentials?): Repository {
             val containerSpec = config.containerSpec
             val accessors: ChunkAccessors = RepoChunkAccessors(branchBackend.getChunkStorage(), config, crypto)
             val log: BranchLog = branchBackend.getBranchLog()
@@ -142,7 +142,7 @@ class Repository private constructor(private val branch: String,
         }
 
         suspend fun open(branch: String, ref: RepositoryRef, branchBackend: StorageBackend.BranchBackend,
-                         crypto: SymCredentials?): Repository {
+                         crypto: SymBaseCredentials?): Repository {
             val repoConfig = RepositoryConfig(ref.objectIndexRef.hash.spec, ref.objectIndexRef.boxSpec)
 
             val containerSpec = repoConfig.containerSpec

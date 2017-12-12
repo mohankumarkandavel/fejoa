@@ -37,6 +37,13 @@ interface CryptoInterface {
     fun decryptSymmetric(input: ByteArray, secretKey: SecretKey, iv: ByteArray, settings: CryptoSettings.Symmetric)
             : Future<ByteArray>
 
+    fun encryptSymmetric(input: ByteArray, credentials: SymCredentials): Future<ByteArray> {
+        return encryptSymmetric(input, credentials.secretKey, credentials.iv, credentials.symmetric)
+    }
+    fun decryptSymmetric(input: ByteArray, credentials: SymCredentials): Future<ByteArray> {
+        return decryptSymmetric(input, credentials.secretKey, credentials.iv, credentials.symmetric)
+    }
+
     fun encode(key: Key): Future<ByteArray>
 
     /*

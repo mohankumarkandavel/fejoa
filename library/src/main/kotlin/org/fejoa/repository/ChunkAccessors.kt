@@ -3,7 +3,7 @@ package org.fejoa.repository
 import org.fejoa.chunkcontainer.BoxSpec
 import org.fejoa.chunkcontainer.ContainerSpec
 import org.fejoa.crypto.CryptoHelper
-import org.fejoa.crypto.SymCredentials
+import org.fejoa.crypto.SymBaseCredentials
 import org.fejoa.storage.*
 import org.fejoa.support.Future
 
@@ -47,7 +47,7 @@ interface ChunkAccessors {
 
 
 class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryConfig,
-                         val crypto: SymCredentials?)
+                         val crypto: SymBaseCredentials?)
     : ChunkAccessors {
 
     override fun startTransaction(): ChunkAccessors.Transaction {
