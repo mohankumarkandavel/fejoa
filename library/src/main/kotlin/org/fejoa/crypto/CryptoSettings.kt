@@ -1,5 +1,7 @@
 package org.fejoa.crypto
 
+import kotlinx.serialization.Serializable
+
 
 class CryptoSettings private constructor() {
     enum class SIGN_ALGO(val javaName: String, val jsName: String, val hash: HASH_TYPE = HASH_TYPE.SHA256) {
@@ -36,11 +38,13 @@ class CryptoSettings private constructor() {
     var signature = Signature()
     var symmetric = Symmetric()
 
+    @Serializable
     open class KeyTypeSettings {
         var keySize = -1
         var keyType: KEY_TYPE = KEY_TYPE.AES
     }
 
+    @Serializable
     class Password {
         // kdf
         var kdfAlgorithm: KDF_ALGO = KDF_ALGO.PBKDF2_SHA256
@@ -48,15 +52,18 @@ class CryptoSettings private constructor() {
         var passwordSize = -1
     }
 
+    @Serializable
     class Symmetric : KeyTypeSettings() {
         var algorithm: SYM_ALGO = SYM_ALGO.AES_CTR
         var ivSize = -1
     }
 
+    @Serializable
     class Asymmetric : KeyTypeSettings() {
         var algorithm: ASYM_ALGO = ASYM_ALGO.RSA_OAEP_SHA256
     }
 
+    @Serializable
     class Signature : KeyTypeSettings() {
         var algorithm: SIGN_ALGO = SIGN_ALGO.RSASSA_PKCS1_v1_5
     }
