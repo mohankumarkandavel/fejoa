@@ -21,3 +21,11 @@ interface RemoteRequest {
     fun send(header: String): Reply
     fun sendData(header: String): DataSender
 }
+
+object HTMLRequestMultipartKeys {
+    val MESSAGE_KEY = "header"
+    val DATA_KEY = "data"
+    val DATA_FILE = "binary.data"
+}
+
+expect fun platformCreateHTMLRequest(url: String): RemoteRequest
