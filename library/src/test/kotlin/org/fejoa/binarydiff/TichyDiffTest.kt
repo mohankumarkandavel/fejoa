@@ -1,7 +1,6 @@
 package org.fejoa.binarydiff
 
 import org.fejoa.support.*
-import kotlin.collections.ArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -152,7 +151,7 @@ class TichyDiffTest {
     fun testRandomChanges() {
         val nTests = 100
 
-        val stats = ArrayList<Stats>()
+        val stats: MutableList<Stats> = ArrayList()
         for (i in 1 .. nTests) {
             //println("Test number $i")
             stats += testRandom(Random(7 + i.toLong()))
