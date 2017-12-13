@@ -106,8 +106,7 @@ class RabinChunkingConfig : DynamicChunkingConfig {
             if (!custom)
                 return config
 
-            val buffer = ProtocolBufferLight()
-            buffer.read(ByteArrayInStream(extra))
+            val buffer = ProtocolBufferLight(extra)
             config.read(buffer)
             return config
         }
@@ -171,8 +170,7 @@ class CyclicPolyChunkingConfig : DynamicChunkingConfig {
                 : CyclicPolyChunkingConfig {
             val config = CyclicPolyChunkingConfig.create(type, ByteArray(0), parent)
             if (hasExt) {
-                val buffer = ProtocolBufferLight()
-                buffer.read(ByteArrayInStream(extra))
+                val buffer = ProtocolBufferLight(extra)
                 config.read(buffer)
             }
             return config

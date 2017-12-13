@@ -122,9 +122,7 @@ class FixedSizeChunkingConfig : ChunkingConfig {
             if (!custom)
                 config
 
-            val inputStream = ByteArrayInStream(extra)
-            val buffer = ProtocolBufferLight()
-            buffer.read(inputStream)
+            val buffer = ProtocolBufferLight(extra)
             val value = buffer.getLong(FixedSizeDetailTag.SIZE.value)
             if (value != null)
                 config.size = value.toInt()

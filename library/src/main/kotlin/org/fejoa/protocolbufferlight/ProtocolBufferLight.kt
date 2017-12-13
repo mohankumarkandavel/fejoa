@@ -117,21 +117,15 @@ class ProtocolBufferLight {
         }
     }
 
-    private val map = HashMap<Int, KeyValue>()
+    private val map: MutableMap<Int, KeyValue> = HashMap()
 
     private val DATA_TYPE_MASK: Long = 0x7
     private val TAG_SHIFT: Int = 3
 
     constructor()
 
-    //@Throws(IOException::class)
     constructor(bytes: ByteArray) {
         read(ByteArrayInStream(bytes))
-    }
-
-    //@Throws(IOException::class)
-    constructor(inStream: InStream) {
-        read(inStream)
     }
 
     companion object {
@@ -142,9 +136,17 @@ class ProtocolBufferLight {
         }
     }
 
-    //@Throws(IOException::class)
-    private fun readKey(inStream: InStream): Key {
-        val number = VarInt.read(inStream).first
+    /**
+     * Try to read a Key
+     *
+     * @return null if the end of stream is reached
+     */
+    private fun readKey(inStream: InStream): Key? {
+        val number = try {
+            VarInt.read(inStream).first
+        } catch (e: EOFException) {
+            return null
+        }
         val dataType = (number and DATA_TYPE_MASK).toInt()
         val tag = number shr TAG_SHIFT
         if (dataType == DataType.VAR_INT.value)
@@ -155,8 +157,12 @@ class ProtocolBufferLight {
         throw IOException("Unknown data type: " + dataType)
     }
 
-    suspend private fun readKey(inStream: AsyncInStream): Key {
-        val number = VarInt.read(inStream).first
+    suspend private fun readKey(inStream: AsyncInStream): Key? {
+        val number = try {
+            VarInt.read(inStream).first
+        } catch (e: EOFException) {
+            return null
+        }
         val dataType = (number and DATA_TYPE_MASK).toInt()
         val tag = number shr TAG_SHIFT
         if (dataType == DataType.VAR_INT.value)
@@ -206,7 +212,6 @@ class ProtocolBufferLight {
         return if (keyValue.key.type != DataType.VAR_INT) null else (keyValue.value as VarIntValue).number
     }
 
-    //@Throws(IOException::class)
     private fun writeKey(outputStream: OutStream, key: Key) {
         var outValue = key.tag shl TAG_SHIFT
         outValue = outValue or key.type.value.toLong()
@@ -219,18 +224,13 @@ class ProtocolBufferLight {
         VarInt.write(outStream, outValue)
     }
 
-    //@Throws(IOException::class)
     fun toByteArray(): ByteArray {
         val outputStream = ByteArrayOutStream()
         write(outputStream)
         return outputStream.toByteArray()
     }
 
-    //@Throws(IOException::class)
     fun write(outputStream: OutStream) {
-        // write number of elements
-        VarInt.write(outputStream, map.size)
-
         for ((_, keyValue) in map) {
             writeKey(outputStream, keyValue.key)
             keyValue.value.write(outputStream)
@@ -238,18 +238,14 @@ class ProtocolBufferLight {
     }
 
     suspend fun write(outStream: AsyncOutStream) {
-        // write number of elements
-        VarInt.write(outStream, map.size)
-
         for ((_, keyValue) in map) {
             writeKey(outStream, keyValue.key)
             keyValue.value.write(outStream)
         }
     }
 
-    //@Throws(IOException::class)
-    private fun readKeyValue(inStream: InStream): KeyValue {
-        val key = readKey(inStream)
+    private fun readKeyValue(inStream: InStream): KeyValue? {
+        val key = readKey(inStream) ?: return null
         if (key.type == DataType.VAR_INT) {
             val varIntValue = VarIntValue(inStream)
             return KeyValue(key, varIntValue)
@@ -261,8 +257,8 @@ class ProtocolBufferLight {
         throw IOException("Unknown data type: " + key.type.value)
     }
 
-    suspend private fun readKeyValue(inStream: AsyncInStream): KeyValue {
-        val key = readKey(inStream)
+    suspend private fun readKeyValue(inStream: AsyncInStream): KeyValue? {
+        val key = readKey(inStream) ?: return null
         if (key.type == DataType.VAR_INT) {
             val varIntValue = VarIntValue.read(inStream)
             return KeyValue(key, varIntValue)
@@ -278,23 +274,20 @@ class ProtocolBufferLight {
      * Read key value pairs till the end of stream is reached.
      *
      * @param InStream
-     * //@Throws IOException
      */
-    //@Throws(IOException::class)
-    fun read(inStream: InStream) {
+    private fun read(inStream: InStream) {
         map.clear()
-        val size = VarInt.read(inStream).first.toInt()
-        for (i in 0..size - 1) {
-            val keyValue = readKeyValue(inStream)
+        while (true) {
+            // read till end of file
+            val keyValue = readKeyValue(inStream) ?: break
             map.put(keyValue.key.tag.toInt(), keyValue)
         }
     }
 
-    suspend fun read(inStream: AsyncInStream) {
+    private suspend fun read(inStream: AsyncInStream) {
         map.clear()
-        val size = VarInt.read(inStream).first.toInt()
-        for (i in 0..size - 1) {
-            val keyValue = readKeyValue(inStream)
+        while (true) {
+            val keyValue = readKeyValue(inStream) ?: break
             map.put(keyValue.key.tag.toInt(), keyValue)
         }
     }
