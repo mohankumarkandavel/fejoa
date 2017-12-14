@@ -61,15 +61,15 @@ class CompactPAKE_SHA256_CTR private constructor(encGroup: DH_GROUP, val secret:
         g = parameters.g
         p = parameters.p
 
-        symmetric.algorithm = CryptoSettings.SYM_ALGO.AES_CTR
-        symmetric.keyType = CryptoSettings.KEY_TYPE.AES
-        symmetric.keySize = 256
+        symmetric.algo = CryptoSettings.SYM_ALGO.AES_CTR
+        symmetric.key.type = CryptoSettings.KEY_TYPE.AES
+        symmetric.key.size = 256
         symmetric.ivSize = 16 * 8
     }
 
     private suspend fun getSecretKey(): SecretKey {
         return secretKey?.let { it }
-                ?: CryptoHelper.crypto.secretKeyFromRaw(secret, symmetric).await().also { secretKey = it }
+                ?: CryptoHelper.crypto.secretKeyFromRaw(secret, symmetric.key).await().also { secretKey = it }
     }
 
     /**

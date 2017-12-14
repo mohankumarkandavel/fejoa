@@ -43,11 +43,11 @@ class SubtleCrypto : CryptoInterface {
         return@async CryptoKeyWrapper(derivedKey, symKeyType.jsName)
     }
 
-    override fun generateKeyPair(settings: CryptoSettings.KeyTypeSettings): Future<KeyPair> {
+    override fun generateKeyPair(settings: CryptoSettings.KeyType): Future<KeyPair> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun generateSymmetricKey(settings: CryptoSettings.KeyTypeSettings): Future<SecretKey> {
+    override fun generateSymmetricKey(settings: CryptoSettings.KeyType): Future<SecretKey> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
@@ -60,7 +60,7 @@ class SubtleCrypto : CryptoInterface {
     }
 
     override fun encryptSymmetric(input: ByteArray, secretKey: SecretKey, iv: ByteArray, settings: CryptoSettings.Symmetric): Future<ByteArray> {
-        val algorithm = json("name" to settings.algorithm,
+        val algorithm = json("name" to settings.algo,
                 "counter" to iv,
                 "length" to settings.ivSize)
         val cryptoKey = (secretKey as CryptoKeyWrapper).key
@@ -68,7 +68,7 @@ class SubtleCrypto : CryptoInterface {
     }
 
     override fun decryptSymmetric(input: ByteArray, secretKey: SecretKey, iv: ByteArray, settings: CryptoSettings.Symmetric): Future<ByteArray> {
-        val algorithm = json("name" to settings.algorithm,
+        val algorithm = json("name" to settings.algo,
                 "counter" to iv,
                 "length" to settings.ivSize)
         val cryptoKey = (secretKey as CryptoKeyWrapper).key

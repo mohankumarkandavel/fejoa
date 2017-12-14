@@ -1,15 +1,32 @@
 package org.fejoa.crypto
 
+import org.fejoa.storage.HashValue
+import org.fejoa.support.await
 import org.fejoa.support.toHex
 import org.fejoa.support.toUTF
 
+
+suspend fun KeyPair.getId(): HashValue {
+    return this.publicKey.getId()
+}
+
+suspend fun PublicKey.getId(): HashValue {
+    val raw = CryptoHelper.crypto.encode(this).await()
+    return HashValue(CryptoHelper.sha256Hash(raw))
+}
 
 class CryptoHelper {
     companion object {
         val crypto: CryptoInterface by lazy { platformCrypto() }
 
+        fun getHashStream(hash: CryptoSettings.HASH_TYPE): AsyncHashOutStream {
+            return when (hash) {
+                CryptoSettings.HASH_TYPE.SHA256 -> getInstanceHashOutStream("SHA-256")
+            }
+        }
+
         fun sha256Hash(): AsyncHashOutStream {
-            return getInstanceHashOutStream("SHA-256")
+            return getHashStream(CryptoSettings.HASH_TYPE.SHA256)
         }
 
         suspend fun sha256HashHex(data: ByteArray): String {
@@ -44,8 +61,12 @@ class CryptoHelper {
             return hash(data, sha1Hash()).toHex()
         }
 
-        suspend fun generateSha1Id(crypto: CryptoInterface): String {
+        suspend fun generateSha1Id(): String {
             return sha1HashHex(crypto.generateSalt())
+        }
+
+        suspend fun generateSha256Id(): String {
+            return sha256HashHex(crypto.generateSalt())
         }
 
         /*

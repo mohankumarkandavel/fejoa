@@ -25,7 +25,7 @@ class BCCryptoInterfaceTest {
     private fun doTest(settings: CryptoSettings) {
         runBlocking {
             val cryptoInterface = CryptoHelper.crypto
-            val keyPair = cryptoInterface.generateKeyPair(settings.publicKey).await()
+            val keyPair = cryptoInterface.generateKeyPair(settings.publicKey.key).await()
 
             // encrypt asymmetric + signature
             val clearTextAsym = "hello crypto asymmetric"
@@ -36,7 +36,7 @@ class BCCryptoInterfaceTest {
             // encrypt symmetric
             val clearTextSym = "hello crypto symmetric"
             val iv = cryptoInterface.generateInitializationVector(settings.symmetric.ivSize)
-            var secretKey = cryptoInterface.generateSymmetricKey(settings.symmetric).await()
+            var secretKey = cryptoInterface.generateSymmetricKey(settings.symmetric.key).await()
             val encryptedSymmetric = cryptoInterface.encryptSymmetric(clearTextSym.toUTF(), secretKey, iv,
                     settings.symmetric).await()
 
@@ -46,7 +46,7 @@ class BCCryptoInterfaceTest {
             val secretKeyBytes = cryptoInterface.encode(secretKey).await()
             val privateKey = cryptoInterface.privateKeyFromPem(privateKeyString).await()
             val publicKey = cryptoInterface.publicKeyFromPem(publicKeyString).await()
-            secretKey = cryptoInterface.secretKeyFromRaw(secretKeyBytes, settings.symmetric).await()
+            secretKey = cryptoInterface.secretKeyFromRaw(secretKeyBytes, settings.symmetric.key).await()
 
             // test if we can decrypt / verify the signature
             val decryptedAsymmetric = cryptoInterface.decryptAsymmetric(encryptedAsymmetric, privateKey,
@@ -79,10 +79,10 @@ class BCCryptoInterfaceTest {
             // test if kdf gives the same value twice
             val password = "testPassword348#"
             val salt = cryptoInterface.generateSalt()
-            val kdfKey1 = cryptoInterface.deriveKey(password, salt, settings.masterPassword.kdfAlgorithm,
+            val kdfKey1 = cryptoInterface.deriveKey(password, salt, settings.kdf.algo,
                     20000, 256).await()
             assertEquals(32, cryptoInterface.encode(kdfKey1).await().size)
-            val kdfKey2 = cryptoInterface.deriveKey(password, salt, settings.masterPassword.kdfAlgorithm,
+            val kdfKey2 = cryptoInterface.deriveKey(password, salt, settings.kdf.algo,
                     20000, 256).await()
             assertTrue(cryptoInterface.encode(kdfKey1).await() contentEquals
                     cryptoInterface.encode(kdfKey2).await())
@@ -100,7 +100,7 @@ class BCCryptoInterfaceTest {
             // encrypt symmetric
             val clearTextSym = "hello crypto symmetric"
             val iv = cryptoInterface.generateInitializationVector(settings.symmetric.ivSize)
-            val secretKey = cryptoInterface.generateSymmetricKey(settings.symmetric).await()
+            val secretKey = cryptoInterface.generateSymmetricKey(settings.symmetric.key).await()
             val encryptedSymmetric = cryptoInterface.encryptSymmetric(clearTextSym.toUTF(), secretKey, iv,
                     settings.symmetric).await()
             val encryptedSymmetric2 = cryptoInterface.encryptSymmetric(clearTextSym.toUTF(), secretKey, iv,

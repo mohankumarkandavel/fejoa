@@ -1,5 +1,6 @@
 package org.fejoa.crypto
 
+import kotlinx.serialization.SerialId
 import kotlinx.serialization.Serializable
 
 
@@ -33,61 +34,75 @@ class CryptoSettings private constructor() {
         PBKDF2_SHA256("PBKDF2WithHmacSHA256", "PBKDF2", HASH_TYPE.SHA256)
     }
 
-    var masterPassword = Password()
+    @Serializable
+    class Symmetric(
+            @SerialId(id = 0)
+            val key: KeyType = KeyType(),
+            @SerialId(id = 1)
+            var algo: SYM_ALGO = SYM_ALGO.AES_CTR,
+            @SerialId(id = 2)
+            var ivSize: Int = -1
+    )
+
+    @Serializable
+    class KDF(
+            @SerialId(id = 0)
+            var algo: KDF_ALGO = KDF_ALGO.PBKDF2_SHA256,
+            @SerialId(id = 1)
+            var iterations: Int = -1,
+            @SerialId(id = 2)
+            var keySize: Int = -1
+    )
+
+    @Serializable
+    class Signature(
+            @SerialId(id = 0)
+            val key: KeyType = KeyType(),
+            @SerialId(id = 1)
+            var algo: SIGN_ALGO = SIGN_ALGO.RSASSA_PKCS1_v1_5
+    )
+
+    @Serializable
+    class Asymmetric(
+            @SerialId(id = 0)
+            val key: KeyType = KeyType(),
+            @SerialId(id = 1)
+            var algo: ASYM_ALGO = ASYM_ALGO.RSA_OAEP_SHA256
+    )
+
+    @Serializable
+    class KeyType(
+            @SerialId(id = 0)
+            var size: Int = -1,
+            @SerialId(id = 1)
+            var type: KEY_TYPE = KEY_TYPE.AES
+    )
+
+    var kdf = KDF()
     var publicKey = Asymmetric()
     var signature = Signature()
     var symmetric = Symmetric()
 
-    @Serializable
-    open class KeyTypeSettings {
-        var keySize = -1
-        var keyType: KEY_TYPE = KEY_TYPE.AES
-    }
-
-    @Serializable
-    class Password {
-        // kdf
-        var kdfAlgorithm: KDF_ALGO = KDF_ALGO.PBKDF2_SHA256
-        var kdfIterations = -1
-        var passwordSize = -1
-    }
-
-    @Serializable
-    class Symmetric : KeyTypeSettings() {
-        var algorithm: SYM_ALGO = SYM_ALGO.AES_CTR
-        var ivSize = -1
-    }
-
-    @Serializable
-    class Asymmetric : KeyTypeSettings() {
-        var algorithm: ASYM_ALGO = ASYM_ALGO.RSA_OAEP_SHA256
-    }
-
-    @Serializable
-    class Signature : KeyTypeSettings() {
-        var algorithm: SIGN_ALGO = SIGN_ALGO.RSASSA_PKCS1_v1_5
-    }
-
     companion object {
 
         fun setDefaultEC(cryptoSettings: CryptoSettings) {
-            cryptoSettings.publicKey.algorithm = ASYM_ALGO.ECIES
-            cryptoSettings.publicKey.keyType = KEY_TYPE.ECIES_SECP256R1
-            cryptoSettings.publicKey.keySize = 0
+            cryptoSettings.publicKey.algo = ASYM_ALGO.ECIES
+            cryptoSettings.publicKey.key.type = KEY_TYPE.ECIES_SECP256R1
+            cryptoSettings.publicKey.key.size = 0
 
-            cryptoSettings.signature.algorithm = SIGN_ALGO.ECDSA_SHA256
-            cryptoSettings.signature.keyType = KEY_TYPE.ECDSA_SECP256R1
-            cryptoSettings.signature.keySize = 0
+            cryptoSettings.signature.algo = SIGN_ALGO.ECDSA_SHA256
+            cryptoSettings.signature.key.type = KEY_TYPE.ECDSA_SECP256R1
+            cryptoSettings.signature.key.size = 0
         }
 
         fun setDefaultRSA(cryptoSettings: CryptoSettings) {
-            cryptoSettings.publicKey.algorithm = ASYM_ALGO.RSA_OAEP_SHA256
-            cryptoSettings.publicKey.keyType = KEY_TYPE.RSA
-            cryptoSettings.publicKey.keySize = 2048
+            cryptoSettings.publicKey.algo = ASYM_ALGO.RSA_OAEP_SHA256
+            cryptoSettings.publicKey.key.type = KEY_TYPE.RSA
+            cryptoSettings.publicKey.key.size = 2048
 
-            cryptoSettings.signature.algorithm = SIGN_ALGO.RSASSA_PKCS1_v1_5
-            cryptoSettings.signature.keyType = KEY_TYPE.RSA
-            cryptoSettings.signature.keySize = 2048
+            cryptoSettings.signature.algo = SIGN_ALGO.RSASSA_PKCS1_v1_5
+            cryptoSettings.signature.key.type = KEY_TYPE.RSA
+            cryptoSettings.signature.key.size = 2048
         }
 
         val default: CryptoSettings
@@ -96,14 +111,14 @@ class CryptoSettings private constructor() {
 
                 setDefaultRSA(cryptoSettings)
 
-                cryptoSettings.symmetric.algorithm = SYM_ALGO.AES_CTR
-                cryptoSettings.symmetric.keyType = KEY_TYPE.AES
-                cryptoSettings.symmetric.keySize = 256
+                cryptoSettings.symmetric.algo = SYM_ALGO.AES_CTR
+                cryptoSettings.symmetric.key.type = KEY_TYPE.AES
+                cryptoSettings.symmetric.key.size = 256
                 cryptoSettings.symmetric.ivSize = 16 * 8
 
-                cryptoSettings.masterPassword.kdfAlgorithm = KDF_ALGO.PBKDF2_SHA256
-                cryptoSettings.masterPassword.kdfIterations = 20000
-                cryptoSettings.masterPassword.passwordSize = 256
+                cryptoSettings.kdf.algo = KDF_ALGO.PBKDF2_SHA256
+                cryptoSettings.kdf.iterations = 20000
+                cryptoSettings.kdf.keySize = 256
 
                 return cryptoSettings
             }
@@ -111,12 +126,12 @@ class CryptoSettings private constructor() {
         val fast: CryptoSettings
             get() {
                 val cryptoSettings = default
-                cryptoSettings.publicKey.keySize = 512
+                cryptoSettings.publicKey.key.size = 512
 
-                cryptoSettings.symmetric.keySize = 128
+                cryptoSettings.symmetric.key.size = 128
                 cryptoSettings.symmetric.ivSize = 16 * 8
 
-                cryptoSettings.masterPassword.kdfIterations = 1
+                cryptoSettings.kdf.iterations = 1
 
                 return cryptoSettings
             }
@@ -127,7 +142,7 @@ class CryptoSettings private constructor() {
 
         fun signatureSettings(algorithm: SIGN_ALGO): Signature {
             val cryptoSettings = signatureSettings()
-            cryptoSettings.algorithm = algorithm
+            cryptoSettings.algo = algorithm
             return cryptoSettings
         }
 
@@ -135,23 +150,24 @@ class CryptoSettings private constructor() {
             val settings = empty()
             val defaultSettings = default
 
-            settings.signature.algorithm = defaultSettings.signature.algorithm
-            settings.signature.keyType = defaultSettings.signature.keyType
-            settings.signature.keySize = defaultSettings.signature.keySize
+            settings.signature.algo = defaultSettings.signature.algo
+            settings.signature.key.type = defaultSettings.signature.key.type
+            settings.signature.key.size = defaultSettings.signature.key.size
             return settings.signature
         }
 
         fun symmetricSettings(keyType: KEY_TYPE, algorithm: SYM_ALGO): Symmetric {
             val cryptoSettings = empty()
-            cryptoSettings.symmetric.keyType = keyType
-            cryptoSettings.symmetric.algorithm = algorithm
+            cryptoSettings.symmetric.key.type = keyType
+            cryptoSettings.symmetric.algo = algorithm
             return cryptoSettings.symmetric
         }
 
         fun symmetricKeyTypeSettings(keyType: KEY_TYPE): CryptoSettings {
             val cryptoSettings = empty()
-            cryptoSettings.symmetric.keyType = keyType
+            cryptoSettings.symmetric.key.type = keyType
             return cryptoSettings
         }
+
     }
 }

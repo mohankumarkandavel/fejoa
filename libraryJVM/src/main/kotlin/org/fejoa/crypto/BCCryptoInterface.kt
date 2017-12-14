@@ -90,7 +90,7 @@ class BCCryptoInterface : CryptoInterface {
             try {
                 val factory = SecretKeyFactory.getInstance(algorithm.javaName)
                 val spec = PBEKeySpec(secret.toCharArray(), salt, iterations, keyLength)
-                return@async SecreteKeyJVM(factory.generateSecret(spec))
+                return@async SecreteKeyJVM(factory.generateSecret(spec), CryptoSettings.KEY_TYPE.AES)
             } catch (e: Exception) {
                 throw CryptoException(e.message)
             }
@@ -98,16 +98,16 @@ class BCCryptoInterface : CryptoInterface {
     }
 
     @Throws(CryptoException::class)
-    override fun generateKeyPair(settings: CryptoSettings.KeyTypeSettings): Future<KeyPair> {
+    override fun generateKeyPair(settings: CryptoSettings.KeyType): Future<KeyPair> {
         val keyGen: KeyPairGenerator
         try {
-            if (settings.keyType.name.startsWith("ECIES")) {
+            if (settings.type.name.startsWith("ECIES")) {
                 keyGen = KeyPairGenerator.getInstance("ECIES")
-                val curve = settings.keyType.name.substring("ECIES/".length)
+                val curve = settings.type.name.substring("ECIES/".length)
                 keyGen.initialize(ECGenParameterSpec(curve))
             } else {
-                keyGen = KeyPairGenerator.getInstance(settings.keyType.javaName)
-                keyGen.initialize(settings.keySize, SecureRandom())
+                keyGen = KeyPairGenerator.getInstance(settings.type.javaName)
+                keyGen.initialize(settings.size, SecureRandom())
             }
         } catch (e: Exception) {
             throw CryptoException(e.message)
@@ -115,7 +115,8 @@ class BCCryptoInterface : CryptoInterface {
 
         val keyPair = keyGen.genKeyPair()
 
-        return Future.completedFuture(KeyPair(PublicKeyJVM(keyPair.public), PrivateKeyJVM(keyPair.private)))
+        return Future.completedFuture(KeyPair(PublicKeyJVM(keyPair.public, settings.type),
+                PrivateKeyJVM(keyPair.private, settings.type)))
     }
 
     @Throws(CryptoException::class)
@@ -123,7 +124,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val cipher: Cipher
             try {
-                cipher = Cipher.getInstance(settings.algorithm.javaName)
+                cipher = Cipher.getInstance(settings.algo.javaName)
                 cipher.init(Cipher.ENCRYPT_MODE, (key as PublicKeyJVM).key)
                 return@async cipher.doFinal(input)
             } catch (e: Exception) {
@@ -137,7 +138,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val cipher: Cipher
             try {
-                cipher = Cipher.getInstance(settings.algorithm.javaName)
+                cipher = Cipher.getInstance(settings.algo.javaName)
                 cipher.init(Cipher.DECRYPT_MODE, (key as PrivateKeyJVM).key)
                 return@async cipher.doFinal(input)
             } catch (e: Exception) {
@@ -147,16 +148,16 @@ class BCCryptoInterface : CryptoInterface {
     }
 
     @Throws(CryptoException::class)
-    override fun generateSymmetricKey(settings: CryptoSettings.KeyTypeSettings): Future<SecretKey> {
+    override fun generateSymmetricKey(settings: CryptoSettings.KeyType): Future<SecretKey> {
         val keyGenerator: KeyGenerator
         try {
-            keyGenerator = KeyGenerator.getInstance(settings.keyType.javaName)
+            keyGenerator = KeyGenerator.getInstance(settings.type.javaName)
         } catch (e: Exception) {
             throw CryptoException(e.message)
         }
 
-        keyGenerator.init(settings.keySize, SecureRandom())
-        return Future.completedFuture(SecreteKeyJVM(keyGenerator.generateKey()))
+        keyGenerator.init(settings.size, SecureRandom())
+        return Future.completedFuture(SecreteKeyJVM(keyGenerator.generateKey(), settings.type))
     }
 
     @Throws(CryptoException::class)
@@ -164,7 +165,7 @@ class BCCryptoInterface : CryptoInterface {
                          settings: CryptoSettings.Symmetric): Future<ByteArray> {
         return async {
             try {
-                val cipher = Cipher.getInstance(settings.algorithm.javaName)
+                val cipher = Cipher.getInstance(settings.algo.javaName)
                 val ips = IvParameterSpec(iv)
                 cipher.init(Cipher.ENCRYPT_MODE, (secretKey as SecreteKeyJVM).key, ips)
                 return@async cipher.doFinal(input)
@@ -179,7 +180,7 @@ class BCCryptoInterface : CryptoInterface {
                          settings: CryptoSettings.Symmetric): Future<ByteArray> {
         return async {
             try {
-                val cipher = Cipher.getInstance(settings.algorithm.javaName)
+                val cipher = Cipher.getInstance(settings.algo.javaName)
                 val ips = IvParameterSpec(iv)
                 cipher.init(Cipher.DECRYPT_MODE, (secretKey as SecreteKeyJVM).key, ips)
                 return@async cipher.doFinal(input)
@@ -194,7 +195,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val signature: Signature
             try {
-                signature = Signature.getInstance(settings.algorithm.javaName)
+                signature = Signature.getInstance(settings.algo.javaName)
                 signature.initSign((key as PrivateKeyJVM).key as java.security.PrivateKey)
                 signature.update(input)
                 return@async signature.sign()
@@ -210,7 +211,7 @@ class BCCryptoInterface : CryptoInterface {
         return async {
             val sig: Signature
             try {
-                sig = Signature.getInstance(settings.algorithm.javaName)
+                sig = Signature.getInstance(settings.algo.javaName)
                 sig.initVerify((key as PublicKeyJVM).key as java.security.PublicKey)
                 sig.update(message)
                 return@async sig.verify(signature)
@@ -224,9 +225,9 @@ class BCCryptoInterface : CryptoInterface {
         return completedFuture((key as KeyJVM).toByteArray())
     }
 
-    override fun secretKeyFromRaw(key: ByteArray, keySizeBytes: Int, algorithm: CryptoSettings.KEY_TYPE)
+    override fun secretKeyFromRaw(key: ByteArray, keySizeBytes: Int, type: CryptoSettings.KEY_TYPE)
             : Future<SecretKey> {
-        return completedFuture(SecreteKeyJVM(SecretKeySpec(key, 0, keySizeBytes, algorithm.javaName)))
+        return completedFuture(SecreteKeyJVM(SecretKeySpec(key, 0, keySizeBytes, type.javaName), type))
     }
 
     private fun getKeyFactory(keyType: String): KeyFactory {
@@ -237,16 +238,16 @@ class BCCryptoInterface : CryptoInterface {
         }
     }
 
-    override fun privateKeyFromRaw(key: ByteArray, keyType: String): Future<PrivateKey> {
+    override fun privateKeyFromRaw(key: ByteArray, type: CryptoSettings.KEY_TYPE): Future<PrivateKey> {
         val spec = PKCS8EncodedKeySpec(key)
-        val keyFactory = getKeyFactory(keyType)
-        return Future.completedFuture(PrivateKeyJVM(keyFactory.generatePrivate(spec)))
+        val keyFactory = getKeyFactory(type.javaName)
+        return Future.completedFuture(PrivateKeyJVM(keyFactory.generatePrivate(spec), type))
     }
 
-    override fun publicKeyFromRaw(key: ByteArray, keyType: String): Future<PublicKey> {
+    override fun publicKeyFromRaw(key: ByteArray, type: CryptoSettings.KEY_TYPE): Future<PublicKey> {
         val spec = X509EncodedKeySpec(key)
-        val keyFactory = getKeyFactory(keyType)
-        return Future.completedFuture(PublicKeyJVM(keyFactory.generatePublic(spec)))
+        val keyFactory = getKeyFactory(type.javaName)
+        return Future.completedFuture(PublicKeyJVM(keyFactory.generatePublic(spec), type))
     }
 
 }

@@ -17,11 +17,11 @@ import kotlin.test.assertTrue
 class RepositoryTest : RepositoryTestBase() {
 
     val simpleCommitSignature = object : CommitSignature {
-        override fun signMessage(message: ByteArray, rootHashValue: HashValue, parents: Collection<HashValue>): ByteArray {
+        override suspend fun signMessage(message: ByteArray, rootHashValue: HashValue, parents: Collection<HashValue>): ByteArray {
             return message
         }
 
-        override fun verifySignedMessage(signedMessage: ByteArray, rootHashValue: HashValue, parents: Collection<HashValue>): Boolean {
+        override suspend fun verifySignedMessage(signedMessage: ByteArray, rootHashValue: HashValue, parents: Collection<HashValue>): Boolean {
             return true
         }
     }
@@ -34,7 +34,7 @@ class RepositoryTest : RepositoryTestBase() {
         val storage = prepareStorage(dirName, branch)
         val crypto = CryptoHelper.crypto
         val settings = CryptoSettings.default
-        val secretKey = crypto.generateSymmetricKey(settings.symmetric).await()
+        val secretKey = crypto.generateSymmetricKey(settings.symmetric.key).await()
         val rawAccessor = storage.getChunkStorage().startTransaction().toChunkAccessor()
         val accessor = rawAccessor.encrypted(crypto, secretKey, settings.symmetric)
 
@@ -97,8 +97,6 @@ class RepositoryTest : RepositoryTestBase() {
         containsContent(repository, content)
         val tip = repository.getHead()
         assertEquals(tip, repository.getHeadCommit()!!.getHash())
-
-
 
         repository = Repository.open(branch, repository.getRepositoryRef(), storage, symCredentials)
         containsContent(repository, content)
