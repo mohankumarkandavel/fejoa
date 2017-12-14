@@ -1,5 +1,6 @@
 package org.fejoa.crypto
 
+import org.fejoa.storage.HashValue
 import org.fejoa.support.await
 
 
@@ -15,4 +16,8 @@ suspend fun CryptoSettings.Symmetric.generateCredentials(): SymCredentials {
 }
 
 
-class SignCredentials(val keyPair: KeyPair, val settings: CryptoSettings.Signature)
+class SignCredentials(val keyPair: KeyPair, val settings: CryptoSettings.Signature) {
+    suspend fun getId(): HashValue {
+        return keyPair.getId()
+    }
+}

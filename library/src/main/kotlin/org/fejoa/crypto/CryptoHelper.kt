@@ -61,12 +61,8 @@ class CryptoHelper {
             return hash(data, sha1Hash()).toHex()
         }
 
-        suspend fun generateSha1Id(): String {
-            return sha1HashHex(crypto.generateSalt())
-        }
-
-        suspend fun generateSha256Id(): String {
-            return sha256HashHex(crypto.generateSalt())
+        suspend fun generateSha256Id(): HashValue {
+            return HashValue(sha256Hash(crypto.generateSalt()))
         }
 
         /*

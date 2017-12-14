@@ -123,7 +123,7 @@ class Repository private constructor(private val branch: String,
 
     init {
         if (crypto != null)
-            branchLogIO = RepositoryBuilder.getEncryptedBranchLogIO(crypto.secretKey, crypto.symmetric)
+            branchLogIO = RepositoryBuilder.getEncryptedBranchLogIO(crypto.key, crypto.symmetric)
         else
             branchLogIO = RepositoryBuilder.getPlainBranchLogIO()
     }

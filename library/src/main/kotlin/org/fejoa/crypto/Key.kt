@@ -1,7 +1,7 @@
 package org.fejoa.crypto
 
 interface Key {
-    val algorithm: String
+    val type: CryptoSettings.KEY_TYPE
 }
 
 interface PublicKey : Key
