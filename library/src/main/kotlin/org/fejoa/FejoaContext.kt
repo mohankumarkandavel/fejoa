@@ -2,7 +2,9 @@ package org.fejoa
 
 import org.fejoa.chunkcontainer.BoxSpec
 import org.fejoa.chunkcontainer.HashSpec
+import org.fejoa.crypto.BaseKeyCache
 import org.fejoa.crypto.CryptoHelper
+import org.fejoa.crypto.SymBaseCredentials
 import org.fejoa.crypto.SymCredentials
 import org.fejoa.repository.*
 import org.fejoa.storage.StorageDir
@@ -12,7 +14,9 @@ import org.fejoa.support.await
 
 
 class FejoaContext(val namespace: String, val executor: Executor) {
-    suspend fun getStorage(branch: String, symCredentials: SymCredentials?, commitSignature: CommitSignature? = null,
+    val baseKeyCache = BaseKeyCache()
+
+    suspend fun getStorage(branch: String, symCredentials: SymBaseCredentials?, commitSignature: CommitSignature? = null,
                            ref: RepositoryRef? = null) : StorageDir {
         val storage = platformCreateStorage().let {
             if (it.exists(namespace, branch)) {
@@ -39,11 +43,11 @@ class FejoaContext(val namespace: String, val executor: Executor) {
         return StorageDir(storage, "", commitSignature, executor)
     }
 
-    private fun getBranchLogIO(credentials: SymCredentials?): BranchLogIO {
+    private fun getBranchLogIO(credentials: SymBaseCredentials?): BranchLogIO {
         return if (credentials == null)
             RepositoryBuilder.getPlainBranchLogIO()
         else
-            RepositoryBuilder.getEncryptedBranchLogIO(credentials.key, credentials.symmetric)
+            RepositoryBuilder.getEncryptedBranchLogIO(credentials.key, credentials.settings)
     }
 
     private fun getRepoConfig(): RepositoryConfig {

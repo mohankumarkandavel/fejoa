@@ -9,7 +9,7 @@ import org.fejoa.support.encodeBase64
 
 
 @Serializable
-private class KeyJson(val key: String, val type: CryptoSettings.KEY_TYPE) {
+class KeyJson(val key: String, val type: CryptoSettings.KEY_TYPE) {
     companion object {
         suspend fun from(key: Key): KeyJson {
             val keyBase64 = CryptoHelper.crypto.encode(key).await().encodeBase64()
@@ -34,7 +34,7 @@ suspend fun secretKeyFromJson(json: String): SecretKey {
 private class SymCredentialsJson(val key: KeyJson, val iv: String, val settings: CryptoSettings.Symmetric)
 
 suspend fun SymCredentials.toJson(): String {
-    return JSON.stringify(SymCredentialsJson(KeyJson.from(this.key), this.iv.encodeBase64(), this.symmetric))
+    return JSON.stringify(SymCredentialsJson(KeyJson.from(this.key), this.iv.encodeBase64(), this.settings))
 }
 
 suspend fun symCredentialsFromJson(json: String): SymCredentials {

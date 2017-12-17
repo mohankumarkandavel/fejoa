@@ -7,16 +7,8 @@ import org.fejoa.support.*
 
 
 @Serializable
-class KeyStoreRef(val branch: String, val settings: CryptoSettings, val iv: String)
+class UserDataRef(val branch: String, val settings: CryptoSettings.Symmetric)
 
-/**
- * Information about UserData branch names
- *
- * @param keyStore ref to the key store
- * @param userData user data branch name
- */
-@Serializable
-class UserDataIndex(val keyStore: KeyStoreRef, val userData: String)
 
 /**
  * Data required by the server
@@ -30,33 +22,41 @@ class ServerData(val outQueue: String, val inQueue: String, val accessStore: Str
  * Contains the UserKeyParams to derive the master key which is used to decrypt the UserDataIndex and the KeyStore. The
  * UserData can be opened using credentials stored in the KeyStore.
  *
- * @param protectedMasterKey to derive the master key
- * @param settings crypto settings for the index and the key store
- * @param data base64 encoded, encrypted UserDataIndex
+ * @param encMasterKey to derive the master key
+ * @param userData TODO
  * @param extra unencrypted data
  */
 @Serializable
-class UserDataSettings(val protectedMasterKey: PasswordProtectedKey,
-                       val settings: CryptoSettings.Symmetric, val iv: String, val data: String, val extra: ServerData) {
+class UserDataSettings(val encMasterKey: PasswordProtectedKey,
+                       val userData: EncData, val serverData: ServerData) {
     companion object {
         suspend fun create(masterKey: SecretKey, password: String, userKeyParams: UserKeyParams,
-                           index: UserDataIndex,
+                           userData: UserDataRef,
                            outQueue: String, inQueue: String, accessStore: String,
                            cache: BaseKeyCache): UserDataSettings {
+            // encrypt the master key
+            val encMasterKey = PasswordProtectedKey.create(masterKey, userKeyParams, password, cache)
 
-            val data = JSON(indented = true).stringify(index).toUTF()
-            val protectedMasterKey = PasswordProtectedKey.create(masterKey, userKeyParams, password, cache)
+            // enc user data
             val settings = CryptoSettings.default.symmetric
             val iv = CryptoHelper.crypto.generateInitializationVector(settings.ivSize)
+            val data = JSON(indented = true).stringify(userData).toUTF()
             val encrypted = CryptoHelper.crypto.encryptSymmetric(data, masterKey, iv, settings).await()
 
-            return UserDataSettings(protectedMasterKey, settings, iv.encodeBase64(),
-                    encrypted.encodeBase64(), ServerData(outQueue, inQueue, accessStore))
+            return UserDataSettings(encMasterKey, EncData(encrypted, iv, settings),
+                    ServerData(outQueue, inQueue, accessStore))
         }
     }
 
-    suspend fun getIndex(symCredentials: SymCredentials): UserDataIndex {
-        val plain = CryptoHelper.crypto.decryptSymmetric(data.decodeBase64(), symCredentials).await()
+    suspend fun open(password: String, cache: BaseKeyCache): Pair<SymBaseCredentials, UserDataRef> {
+        val masterKey = encMasterKey.decryptKey(password, cache)
+        val userDataRef = getUserDataRef(masterKey, userData)
+        return SymBaseCredentials(masterKey, userDataRef.settings) to userDataRef
+    }
+
+    suspend private fun getUserDataRef(key: SecretKey, encData: EncData): UserDataRef {
+        val plain = CryptoHelper.crypto.decryptSymmetric(encData.getEncData(), key, encData.getIv(),
+                encData.settings).await()
         return JSON.parse(plain.toUTFString())
     }
 }

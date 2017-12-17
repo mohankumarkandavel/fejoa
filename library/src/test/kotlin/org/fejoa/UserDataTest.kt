@@ -1,6 +1,7 @@
 package org.fejoa
 
 import kotlinx.coroutines.experimental.runBlocking
+import org.fejoa.crypto.*
 import org.fejoa.storage.platformCreateStorage
 import org.fejoa.support.NowExecutor
 import kotlin.test.AfterTest
@@ -21,13 +22,24 @@ class UserDataTest {
     @Test
     fun testCreateOpen() = runBlocking {
         val namespace = "testCreateOpen"
+        val password = "Password"
         cleanUp += namespace
         val context = FejoaContext(namespace, NowExecutor())
         val userData = UserData.create(context)
         userData.commit()
 
-        val loadedUserData = UserData.open(context, userData.keyStore.branch,
-                userData.keyStore.masterCredentials, userData.branch)
+        val settings = userData.getUserDataSettings(password,
+                UserKeyParams(BaseKeyParams(CryptoSettings.default.kdf, CryptoHelper.crypto.generateSalt16()),
+                        CryptoSettings.HASH_TYPE.SHA256,
+                        CryptoSettings.KEY_TYPE.AES, CryptoHelper.crypto.generateSalt16()))
+        platformWriteUserDataSettings(namespace, settings)
+
+        val loadedSettings = platformReadUserDataSettings(namespace)
+
+        val newContext = FejoaContext(namespace, NowExecutor())
+        val plainUserDataSettings = loadedSettings.open(password, newContext.baseKeyCache)
+        val loadedUserData = UserData.open(newContext, plainUserDataSettings.first,
+                plainUserDataSettings.second.branch)
 
         assertEquals(userData.branch, loadedUserData.branch)
     }

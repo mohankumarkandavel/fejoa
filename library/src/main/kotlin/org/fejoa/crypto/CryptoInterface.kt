@@ -41,10 +41,10 @@ interface CryptoInterface {
             : Future<ByteArray>
 
     fun encryptSymmetric(input: ByteArray, credentials: SymCredentials): Future<ByteArray> {
-        return encryptSymmetric(input, credentials.key, credentials.iv, credentials.symmetric)
+        return encryptSymmetric(input, credentials.key, credentials.iv, credentials.settings)
     }
     fun decryptSymmetric(input: ByteArray, credentials: SymCredentials): Future<ByteArray> {
-        return decryptSymmetric(input, credentials.key, credentials.iv, credentials.symmetric)
+        return decryptSymmetric(input, credentials.key, credentials.iv, credentials.settings)
     }
 
     fun encode(key: Key): Future<ByteArray>

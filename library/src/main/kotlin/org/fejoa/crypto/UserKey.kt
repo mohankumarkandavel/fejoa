@@ -2,6 +2,8 @@ package org.fejoa.crypto
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JSON
+import org.fejoa.storage.secretKeyFromJson
+import org.fejoa.storage.toJson
 import org.fejoa.support.*
 
 
@@ -9,7 +11,7 @@ import org.fejoa.support.*
  * @salt encoded as base64
  */
 @Serializable
-class BaseKeyParams(val kdf: CryptoSettings.KDF, val salt: String = "")  {
+class BaseKeyParams(val kdf: CryptoSettings.KDF = CryptoSettings.KDF(), val salt: String)  {
     constructor(kdf: CryptoSettings.KDF, salt: ByteArray) : this(kdf, salt.encodeBase64())
 
     fun getSalt(): ByteArray {
@@ -67,38 +69,26 @@ class BaseKeyCache {
 }
 
 @Serializable
-class PasswordProtectedKey(val userKeyParams: UserKeyParams, val encKey: String, val keyType: CryptoSettings.KEY_TYPE,
-                           val iv: String, val settings: CryptoSettings.Symmetric) {
-    constructor(userKeyParams: UserKeyParams, encKey: ByteArray, keyType: CryptoSettings.KEY_TYPE, iv: ByteArray,
-                settings: CryptoSettings.Symmetric)
-            : this(userKeyParams, encKey.encodeBase64(), keyType, iv.encodeBase64(), settings)
-
+class PasswordProtectedKey(val userKeyParams: UserKeyParams, val encKey: EncData) {
     companion object {
         suspend fun create(secretKey: SecretKey, userKeyParams: UserKeyParams, password: String, cache: BaseKeyCache)
                 : PasswordProtectedKey {
             val userKey = cache.getUserKey(userKeyParams, password)
-            val rawKey = CryptoHelper.crypto.encode(secretKey).await()
 
             val settings = CryptoSettings.default.symmetric
             val iv = CryptoHelper.crypto.generateInitializationVector(settings.ivSize)
             val credentials = SymCredentials(userKey, iv, settings)
-            val encryptedKey = CryptoHelper.crypto.encryptSymmetric(rawKey, credentials).await()
+            val encryptedKey = CryptoHelper.crypto.encryptSymmetric(secretKey.toJson().toUTF(),
+                    credentials).await()
 
-            return PasswordProtectedKey(userKeyParams, encryptedKey, secretKey.type, iv, settings)
+            return PasswordProtectedKey(userKeyParams, EncData(encryptedKey, iv, settings))
         }
-    }
-
-    fun getIv(): ByteArray {
-        return iv.decodeBase64()
-    }
-
-    fun getEncKey(): ByteArray {
-        return encKey.decodeBase64()
     }
 
     suspend fun decryptKey(password: String, cache: BaseKeyCache): SecretKey {
         val userKey = cache.getUserKey(userKeyParams, password)
-        val rawKey = CryptoHelper.crypto.decryptSymmetric(getEncKey(), userKey, getIv(), settings).await()
-        return CryptoHelper.crypto.secretKeyFromRaw(rawKey, keyType).await()
+        val jsonKey = CryptoHelper.crypto.decryptSymmetric(encKey.getEncData(), userKey,
+                encKey.getIv(), encKey.settings).await().toUTFString()
+        return secretKeyFromJson(jsonKey)
     }
 }

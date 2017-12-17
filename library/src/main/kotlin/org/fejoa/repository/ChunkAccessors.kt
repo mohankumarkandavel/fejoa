@@ -59,7 +59,7 @@ class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryCo
                     BoxSpec.EncryptionInfo.Type.PLAIN -> accessor
                     BoxSpec.EncryptionInfo.Type.PARENT -> {
                         val cryptoConfig = crypto ?: throw Exception("Missing crypto data")
-                        accessor.encrypted(CryptoHelper.crypto, cryptoConfig.key, cryptoConfig.symmetric)
+                        accessor.encrypted(CryptoHelper.crypto, cryptoConfig.key, cryptoConfig.settings)
                     }
                 }
             }

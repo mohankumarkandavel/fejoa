@@ -12,7 +12,7 @@ class User(val storageDir: StorageDir) {
     val defaultSigningCredential = DBHashValue(storageDir, "signing/default")
 }
 
-class UserData private constructor(val context: FejoaContext, storageDir: StorageDir, val keyStore: KeyStore)
+class UserData private constructor(val context: FejoaContext, val masterKey: SymBaseCredentials, storageDir: StorageDir)
     : StorageDirObject(storageDir) {
     val user = User(storageDir)
 
@@ -21,12 +21,10 @@ class UserData private constructor(val context: FejoaContext, storageDir: Storag
             val signingKeyPair = CryptoHelper.crypto.generateKeyPair(settings.signature.key).await()
             val userId = signingKeyPair.getId()
 
-            val keyStore = KeyStore.create(context, settings.symmetric)
-
             val userDataBranch = CryptoHelper.generateSha256Id()
-            val userDataCredentials = settings.symmetric.generateCredentials()
+            val userDataCredentials = settings.symmetric.generateBaseCredentials()
             val userDataStorage = context.getStorage(userDataBranch.toHex(), userDataCredentials)
-            val userData = UserData(context, userDataStorage, keyStore)
+            val userData = UserData(context, userDataCredentials, userDataStorage)
 
             val signCredentials = SignCredentials(signingKeyPair, settings.signature)
             val signingKeyID = signCredentials.getId()
@@ -38,19 +36,13 @@ class UserData private constructor(val context: FejoaContext, storageDir: Storag
                     { signer: HashValue, keyId: HashValue -> userData.getSigningKey(signer, keyId)})
             userDataStorage.setCommitSignature(commitSignature)
 
-            // create key store
-            keyStore.storageDir.setCommitSignature(commitSignature)
-            keyStore.addBranchCredentials(userDataBranch, userDataCredentials)
-
             return userData
         }
 
-        suspend fun open(context: FejoaContext, keyStoreBranch: String, masterKey: SymCredentials, branch: String): UserData {
-            val keyStore = KeyStore.open(context, keyStoreBranch, masterKey)
-            val userDataCredentials = keyStore.getBranchCredentials(HashValue.fromHex(branch))
-            val userDataStorage = context.getStorage(branch, userDataCredentials)
+        suspend fun open(context: FejoaContext, masterKey: SymBaseCredentials, branch: String): UserData {
+            val userDataStorage = context.getStorage(branch, masterKey)
 
-            val userData = UserData(context, userDataStorage, keyStore)
+            val userData = UserData(context, masterKey, userDataStorage)
 
             val user = userData.user
             val signCredentials = user.signingCredentialList.get(user.defaultSigningCredential.get()).get()
@@ -58,7 +50,6 @@ class UserData private constructor(val context: FejoaContext, storageDir: Storag
                     { signer: HashValue, keyId: HashValue -> userData.getSigningKey(signer, keyId)})
 
             userDataStorage.setCommitSignature(commitSignature)
-            keyStore.storageDir.setCommitSignature(commitSignature)
 
             return userData
         }
@@ -70,9 +61,14 @@ class UserData private constructor(val context: FejoaContext, storageDir: Storag
         return null
     }
 
+    suspend fun getUserDataSettings(password: String, userKeyParams: UserKeyParams): UserDataSettings {
+        return UserDataSettings.create(masterKey.key, password, userKeyParams,
+                UserDataRef(branch, masterKey.settings),
+                "", "", "",
+                context.baseKeyCache)
+    }
+
     override suspend fun commit() {
         super.commit()
-
-        keyStore.commit()
     }
 }
