@@ -14,12 +14,11 @@ class PingJob : SimpleRemoteJob<PingJob.Result>(true) {
         : RemoteJob.Result(status, message)
 
     @Serializable
-    class PingRequest(val id: Int, val method: String, val params: PingParam, val jsonrpc: String = RPC_VERSION)
-    @Serializable
     class PingParam(val text: String)
 
     override fun getHeader(): String {
-        return JSON.stringify(PingRequest(id = id, method = METHOD, params = PingParam("ping")))
+        return JsonRPCRequest(id = id, method = METHOD, params = PingParam("ping"))
+                .stringify(PingParam.serializer())
     }
 
     suspend override fun writeData(outStream: AsyncOutStream) {
@@ -27,9 +26,9 @@ class PingJob : SimpleRemoteJob<PingJob.Result>(true) {
     }
 
     suspend override fun handle(responseHeader: String, inStream: AsyncInStream): Result {
-        val response = JSON.parse<JsonRPCSimpleResponse>(responseHeader)
-        if (response.id != id)
-            throw Exception("Id miss match. Expected: $id, Actual: ${response.id}")
+        val response = JsonRPCResponse.parse<JsonRPCStatusResult>(JsonRPCStatusResult.serializer(),
+                responseHeader, id)
+
         val params = response.result
 
         val dataResponse = inStream.readAll().toUTFString()

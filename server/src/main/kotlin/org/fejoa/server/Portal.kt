@@ -1,12 +1,12 @@
 package org.fejoa.server
 
+import kotlinx.serialization.serializer
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.HttpMultipartMode
 import org.apache.http.entity.mime.MultipartEntityBuilder
 import org.eclipse.jetty.server.Request
 import org.eclipse.jetty.server.handler.AbstractHandler
-import org.fejoa.network.Errors
-import org.fejoa.network.HTMLRequestMultipartKeys
+import org.fejoa.network.*
 import org.fejoa.support.toUTFString
 
 import javax.servlet.MultipartConfigElement
@@ -113,31 +113,28 @@ class Portal(private val baseDir: String) : AbstractHandler() {
         responseHandler.finish()
     }
 
-    private fun handleJson(responseHandler: ResponseHandler, message: String, data: InputStream?, session: Session): String? {
-        val jsonRPCHandler: JsonRPCHandler
-        try {
-            jsonRPCHandler = JsonRPCHandler(message)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return JsonRPCHandler.makeResult(-1, Errors.INVALID_JSON_REQUEST, "can't parse json")
-        }
 
-        val method = jsonRPCHandler.method
+    private fun handleJson(responseHandler: ResponseHandler, message: String, data: InputStream?, session: Session): String? {
+        val request = try {
+            JsonRPCMethodRequest.parse(message)
+        } catch (e: Exception) {
+            return JsonRPCMethodRequest.makeResponse(-1, Errors.INVALID_JSON_REQUEST, "can't parse json")
+        }
         for (handler in jsonHandlers) {
-            if (!handler.method.equals(method))
+            if (handler.method != request.method)
                 continue
 
             try {
-                handler.handle(responseHandler, jsonRPCHandler, data, session)
+                handler.handle(responseHandler, message, data, session)
             } catch (e: Exception) {
                 e.printStackTrace()
-                return jsonRPCHandler.makeResult(Errors.EXCEPTION, e.message ?: "")
+                return request.makeResponse(Errors.EXCEPTION, e.message ?: "")
             }
 
             if (responseHandler.isHandled)
                 return null
         }
 
-        return jsonRPCHandler.makeResult(Errors.NO_HANDLER_FOR_REQUEST, "can't handle request")
+        return request.makeResponse(Errors.NO_HANDLER_FOR_REQUEST, "can't handle request")
     }
 }

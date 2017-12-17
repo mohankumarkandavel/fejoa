@@ -1,26 +1,23 @@
 package org.fejoa.server
 
+import kotlinx.serialization.serializer
 import org.fejoa.network.Errors
+import org.fejoa.network.JsonRPCRequest
 import org.fejoa.network.PingJob
-import org.json.JSONException
 
 import java.io.*
 
 
 class JsonPingHandler : JsonRequestHandler(PingJob.METHOD) {
-    override fun handle(responseHandler: Portal.ResponseHandler, jsonRPCHandler: JsonRPCHandler, data: InputStream?,
+    override fun handle(responseHandler: Portal.ResponseHandler, json: String, data: InputStream?,
                         session: Session) {
         if (data == null)
             throw IOException("data expected!")
 
-        val text: String
-        try {
-            text = jsonRPCHandler.params!!.getString("text")
-        } catch (e: JSONException) {
-            throw IOException("missing argument")
-        }
+        val request = JsonRPCRequest.parse(PingJob.PingParam::class.serializer(), json)
+        val text = request.params.text
 
-        val response = jsonRPCHandler.makeResult(Errors.OK, text + " pong")
+        val response = request.makeResponse(Errors.OK, text + " pong")
         responseHandler.setResponseHeader(response)
 
         val bufferedReader = BufferedReader(InputStreamReader(data))
