@@ -87,7 +87,13 @@ class CompactPAKE_SHA256_CTR private constructor(encGroup: DH_GROUP, val secret:
     }
 
     private suspend fun getSessionKeyPrime(gx: BigInteger, gy: BigInteger, gxy: BigInteger): ByteArray {
-        return hash(proverId + verifierId + gx.toString(16) + gy.toString(16) + gxy.toString(16))
+        val hashStream = CryptoHelper.sha256Hash()
+        hashStream.write(proverId.toUTF())
+        hashStream.write(verifierId.toUTF())
+        hashStream.write(fromHex(gx.toString(16)))
+        hashStream.write(fromHex(gy.toString(16)))
+        hashStream.write(fromHex(gxy.toString(16)))
+        return hashStream.hash()
     }
 
     private suspend fun getVerifierAuthToken(sessionKeyPrime: ByteArray): ByteArray {
