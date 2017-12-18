@@ -23,7 +23,7 @@ class ServerData(val outQueue: String, val inQueue: String, val accessStore: Str
  * UserData can be opened using credentials stored in the KeyStore.
  *
  * @param encMasterKey to derive the master key
- * @param userData TODO
+ * @param userData encrypted user data information (UserDataRef)
  * @param extra unencrypted data
  */
 @Serializable

@@ -23,7 +23,7 @@ class JsonRpcTest {
         val parsedRequest = JsonRPCRequest.parse(StringSerializer, requestJson)
         assertEquals("test", parsedRequest.params)
 
-        // make response for client
+        // create a response for the client
         val response = parsedRequest.makeResponse(0, "FromServer")
 
         // at client:

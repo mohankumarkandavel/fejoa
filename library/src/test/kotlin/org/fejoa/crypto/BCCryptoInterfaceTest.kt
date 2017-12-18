@@ -11,7 +11,6 @@ import kotlin.test.Test
 class BCCryptoInterfaceTest {
 
     @Test
-    //@Throws(Exception::class)
     fun testCrypto() {
         val settings = CryptoSettings.default
         CryptoSettings.setDefaultEC(settings)
@@ -21,7 +20,6 @@ class BCCryptoInterfaceTest {
         doTest(settings)
     }
 
-    //@Throws(CryptoException::class, IOException::class)
     private fun doTest(settings: CryptoSettings) {
         runBlocking {
             val cryptoInterface = CryptoHelper.crypto
@@ -90,7 +88,6 @@ class BCCryptoInterfaceTest {
     }
 
     @Test
-    //@Throws(Exception::class)
     fun testConvergentEncryption() {
         runBlocking {
             val settings = CryptoSettings.default
