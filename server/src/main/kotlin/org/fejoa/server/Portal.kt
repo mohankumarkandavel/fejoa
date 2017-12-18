@@ -1,6 +1,5 @@
 package org.fejoa.server
 
-import kotlinx.serialization.serializer
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.HttpMultipartMode
 import org.apache.http.entity.mime.MultipartEntityBuilder
@@ -22,18 +21,7 @@ class Portal(private val baseDir: String) : AbstractHandler() {
 
     init {
         addJsonHandler(JsonPingHandler())
-        /*
-        addJsonHandler(new JsonPingHandler());
-        addJsonHandler(new WatchHandler());
-        addJsonHandler(new ChunkStoreRequestHandler());
-        addJsonHandler(new CreateAccountHandler());
-        addJsonHandler(new LoginRequestHandler());
-        addJsonHandler(new CommandHandler());
-        addJsonHandler(new AccessRequestHandler());
-        addJsonHandler(new StartMigrationHandler());
-        addJsonHandler(new RemotePullHandler());
-        addJsonHandler(new RemoteIndexRequestHandler());
-        */
+        addJsonHandler(RegisterHandler())
     }
 
     inner class ResponseHandler(private val response: HttpServletResponse) {

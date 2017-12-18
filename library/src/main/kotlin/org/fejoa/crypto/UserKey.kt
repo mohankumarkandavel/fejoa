@@ -11,8 +11,8 @@ import org.fejoa.support.*
  * @salt encoded as base64
  */
 @Serializable
-class BaseKeyParams(val kdf: CryptoSettings.KDF = CryptoSettings.KDF(), val salt: String)  {
-    constructor(kdf: CryptoSettings.KDF, salt: ByteArray) : this(kdf, salt.encodeBase64())
+data class BaseKeyParams(val kdf: CryptoSettings.KDF = CryptoSettings.KDF(), val salt: String)  {
+    constructor(kdf: CryptoSettings.KDF = CryptoSettings.KDF(), salt: ByteArray) : this(kdf, salt.encodeBase64())
 
     fun getSalt(): ByteArray {
         return salt.decodeBase64()

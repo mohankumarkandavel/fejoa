@@ -1,9 +1,17 @@
 package org.fejoa.server
 
 import kotlinx.coroutines.experimental.runBlocking
+import org.fejoa.AuthParams
+import org.fejoa.auth.crypto.DH_GROUP
+import org.fejoa.crypto.BaseKeyParams
+import org.fejoa.crypto.CryptoHelper
+import org.fejoa.crypto.CryptoSettings
+import org.fejoa.crypto.UserKeyParams
 import org.fejoa.network.PingJob
+import org.fejoa.network.RegisterJob
 import org.fejoa.network.RemoteJob
 import org.fejoa.network.platformCreateHTMLRequest
+import org.fejoa.platformReadAuthData
 
 import java.io.File
 import java.util.ArrayList
@@ -53,4 +61,17 @@ class JettyTest {
         assertEquals("PING PONG", result.dataResponse)
     }
 
+    @Test
+    fun testRegistration() = runBlocking {
+        val request = platformCreateHTMLRequest(url)
+        val authParams = AuthParams(UserKeyParams(BaseKeyParams(salt = CryptoHelper.crypto.generateSalt16()),
+                CryptoSettings.HASH_TYPE.SHA256, CryptoSettings.KEY_TYPE.AES, CryptoHelper.crypto.generateSalt16()),
+                "InvalidP_pi", DH_GROUP.RFC5114_2048_256)
+        val job = RegisterJob("testUser", authParams)
+        val result = RemoteJob.run(job, request)
+        assertEquals(result.status, 0)
+
+        val readAuthParams = platformReadAuthData(SERVER_TEST_DIR, "testUser")
+        assertEquals(authParams, readAuthParams)
+    }
 }

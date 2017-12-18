@@ -35,7 +35,7 @@ class CryptoSettings private constructor() {
     }
 
     @Serializable
-    class Symmetric(
+    data class Symmetric(
             @SerialId(id = 0)
             val key: KeyType = KeyType(),
             @SerialId(id = 1)
@@ -45,7 +45,7 @@ class CryptoSettings private constructor() {
     )
 
     @Serializable
-    class KDF(
+    data class KDF(
             @SerialId(id = 0)
             var algo: KDF_ALGO = KDF_ALGO.PBKDF2_SHA256,
             @SerialId(id = 1)
@@ -55,7 +55,7 @@ class CryptoSettings private constructor() {
     )
 
     @Serializable
-    class Signature(
+    data class Signature(
             @SerialId(id = 0)
             val key: KeyType = KeyType(),
             @SerialId(id = 1)
@@ -63,7 +63,7 @@ class CryptoSettings private constructor() {
     )
 
     @Serializable
-    class Asymmetric(
+    data class Asymmetric(
             @SerialId(id = 0)
             val key: KeyType = KeyType(),
             @SerialId(id = 1)
@@ -71,7 +71,7 @@ class CryptoSettings private constructor() {
     )
 
     @Serializable
-    class KeyType(
+    data class KeyType(
             @SerialId(id = 0)
             var size: Int = -1,
             @SerialId(id = 1)
