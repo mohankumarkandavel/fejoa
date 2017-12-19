@@ -1,4 +1,5 @@
 apply plugin: 'kotlin-platform-jvm'
+apply plugin: 'kotlinx-serialization'
 
 repositories {
     maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
@@ -7,12 +8,13 @@ repositories {
 }
 
 dependencies {
-    expectedBy project(":rabin")
+    expectedBy project(":cloudefs")
+
+    compile project(":chunkstoreJVM")
     compile project(":libJVM")
+    compile project(":rabinJVM")
 
-    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version"
-
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 }

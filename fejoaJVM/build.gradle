@@ -1,4 +1,5 @@
 apply plugin: 'kotlin-platform-jvm'
+apply plugin: 'kotlinx-serialization'
 
 repositories {
     maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
@@ -7,12 +8,18 @@ repositories {
 }
 
 dependencies {
-    expectedBy project(":rabin")
+    compile project(":chunkstoreJVM")
+    compile project(":cloudefsJVM")
     compile project(":libJVM")
+    compile project(":rabinJVM")
+    expectedBy project(":fejoa")
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version"
     compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version"
 
+    compile group: 'org.apache.httpcomponents', name: 'httpmime', version: '4.3.5'
+    compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '9.0.3.v20130506'
+
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
-    testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
 }

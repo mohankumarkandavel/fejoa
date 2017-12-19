@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    compile project(':libraryJVM')
+    compile project(':fejoaJVM')
 
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
     compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '9.0.3.v20130506'

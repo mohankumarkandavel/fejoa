@@ -2,7 +2,7 @@ package org.fejoa.server
 
 import kotlinx.coroutines.experimental.runBlocking
 import org.fejoa.AuthParams
-import org.fejoa.auth.crypto.DH_GROUP
+import org.fejoa.crypto.DH_GROUP
 import org.fejoa.crypto.BaseKeyParams
 import org.fejoa.crypto.CryptoHelper
 import org.fejoa.crypto.CryptoSettings
