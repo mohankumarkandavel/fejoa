@@ -1,22 +1,16 @@
 package org.fejoa.server
 
 import kotlinx.coroutines.experimental.runBlocking
-import org.fejoa.AuthParams
-import org.fejoa.crypto.DH_GROUP
-import org.fejoa.crypto.BaseKeyParams
-import org.fejoa.crypto.CryptoHelper
-import org.fejoa.crypto.CryptoSettings
-import org.fejoa.crypto.UserKeyParams
-import org.fejoa.network.PingJob
-import org.fejoa.network.RegisterJob
-import org.fejoa.network.RemoteJob
-import org.fejoa.network.platformCreateHTMLRequest
-import org.fejoa.platformReadAuthData
+import org.fejoa.LoginParams
+import org.fejoa.crypto.*
+import org.fejoa.network.*
+import org.fejoa.platformReadLoginData
 
 import java.io.File
 import java.util.ArrayList
 
 import org.fejoa.server.JettyServer.Companion.DEFAULT_PORT
+import org.fejoa.support.encodeBase64
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -54,24 +48,36 @@ class JettyTest {
     @Test
     fun testSimple() = runBlocking {
         val request = platformCreateHTMLRequest(url)
-        val pingJob = PingJob()
-        val result = RemoteJob.run(pingJob, request)
+        val result = PingJob().run(request)
 
         assertEquals("ping pong", result.headerResponse)
         assertEquals("PING PONG", result.dataResponse)
     }
 
     @Test
-    fun testRegistration() = runBlocking {
-        val request = platformCreateHTMLRequest(url)
-        val authParams = AuthParams(UserKeyParams(BaseKeyParams(salt = CryptoHelper.crypto.generateSalt16()),
-                CryptoSettings.HASH_TYPE.SHA256, CryptoSettings.KEY_TYPE.AES, CryptoHelper.crypto.generateSalt16()),
-                "InvalidP_pi", DH_GROUP.RFC5114_2048_256)
-        val job = RegisterJob("testUser", authParams)
-        val result = RemoteJob.run(job, request)
-        assertEquals(result.status, 0)
+    fun testRegistrationAndAuth() = runBlocking {
+        val user = "testUser"
+        val password = "password"
 
-        val readAuthParams = platformReadAuthData(SERVER_TEST_DIR, "testUser")
+        val keyCache = BaseKeyCache()
+        val userKeyParams = UserKeyParams(BaseKeyParams(salt = CryptoHelper.crypto.generateSalt16(),
+                kdf = CryptoSettings.default.kdf),
+                CryptoSettings.HASH_TYPE.SHA256, CryptoSettings.KEY_TYPE.AES, CryptoHelper.crypto.generateSalt16())
+        val secret = keyCache.getUserKey(userKeyParams, password)
+
+        val request = platformCreateHTMLRequest(url)
+        val authParams = LoginParams(userKeyParams,
+                CompactPAKE_SHA256_CTR.getSharedSecret(DH_GROUP.RFC5114_2048_256, secret),
+                DH_GROUP.RFC5114_2048_256)
+
+        val registerResult = RegisterJob(user, authParams).run(request)
+        assertEquals(ReturnType.OK, registerResult.code)
+
+        val readAuthParams = platformReadLoginData(SERVER_TEST_DIR, user)
         assertEquals(authParams, readAuthParams)
+
+        val authResult = LoginJob(user, password, keyCache).run(request)
+        assertEquals(ReturnType.OK, authResult.code)
+
     }
 }

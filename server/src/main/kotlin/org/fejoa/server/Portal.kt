@@ -22,6 +22,7 @@ class Portal(private val baseDir: String) : AbstractHandler() {
     init {
         addJsonHandler(JsonPingHandler())
         addJsonHandler(RegisterHandler())
+        addJsonHandler(LoginHandler())
     }
 
     inner class ResponseHandler(private val response: HttpServletResponse) {
@@ -106,7 +107,7 @@ class Portal(private val baseDir: String) : AbstractHandler() {
         val request = try {
             JsonRPCMethodRequest.parse(message)
         } catch (e: Exception) {
-            return JsonRPCMethodRequest.makeResponse(-1, Errors.INVALID_JSON_REQUEST, "can't parse json")
+            return JsonRPCMethodRequest.makeError(-1, ReturnType.INVALID_JSON_REQUEST, "can't parse json")
         }
         for (handler in jsonHandlers) {
             if (handler.method != request.method)
@@ -116,13 +117,13 @@ class Portal(private val baseDir: String) : AbstractHandler() {
                 handler.handle(responseHandler, message, data, session)
             } catch (e: Exception) {
                 e.printStackTrace()
-                return request.makeResponse(Errors.EXCEPTION, e.message ?: "")
+                return request.makeError(ReturnType.EXCEPTION, e.message ?: "")
             }
 
             if (responseHandler.isHandled)
                 return null
         }
 
-        return request.makeResponse(Errors.NO_HANDLER_FOR_REQUEST, "can't handle request")
+        return request.makeError(ReturnType.NO_HANDLER_FOR_REQUEST, "can't handle request")
     }
 }

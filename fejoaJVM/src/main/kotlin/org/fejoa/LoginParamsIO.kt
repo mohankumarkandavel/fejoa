@@ -13,16 +13,16 @@ private fun authDataFile(path: String): String {
     return PathUtils.appendDir(path, "AuthData.json")
 }
 
-actual fun platformWriteAuthData(path: String, namespace: String, authData: AuthParams) {
+actual fun platformWriteLoginData(path: String, namespace: String, loginData: LoginParams) {
     val dir = authDataDir(path, namespace)
     File(dir).mkdirs()
     val fileName = authDataFile(dir)
     val writer = BufferedWriter(OutputStreamWriter(FileOutputStream(fileName)))
-    writer.write(JSON(indented = true).stringify(authData))
+    writer.write(JSON(indented = true).stringify(loginData))
     writer.close()
 }
 
-actual fun platformReadAuthData(path: String, namespace: String): AuthParams {
+actual fun platformReadLoginData(path: String, namespace: String): LoginParams {
     val fileName = authDataFile(authDataDir(path, namespace))
     val input = BufferedReader(InputStreamReader(FileInputStream(fileName)))
     val json = input.readText()

@@ -2,6 +2,7 @@ package org.fejoa.repository.sync
 
 
 enum class AccessRight(val value: Int) {
+    NONE(0),
     PULL(0x01),
     PUSH(0x02),
     PULL_CHUNK_STORE(0x04),

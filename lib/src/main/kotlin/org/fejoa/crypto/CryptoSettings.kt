@@ -117,7 +117,7 @@ class CryptoSettings private constructor() {
                 cryptoSettings.symmetric.ivSize = 16 * 8
 
                 cryptoSettings.kdf.algo = KDF_ALGO.PBKDF2_SHA256
-                cryptoSettings.kdf.iterations = 20000
+                cryptoSettings.kdf.iterations = 100000
                 cryptoSettings.kdf.keySize = 256
 
                 return cryptoSettings
