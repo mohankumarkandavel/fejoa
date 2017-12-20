@@ -6,8 +6,7 @@ import org.fejoa.support.AsyncInStream
 import org.fejoa.support.AsyncOutStream
 import org.fejoa.support.toHex
 import java.io.*
-import java.net.HttpURLConnection
-import java.net.URL
+import java.net.*
 import javax.servlet.ServletException
 
 
@@ -38,9 +37,15 @@ fun InputStream.toAsyncInStream(): AsyncInStream {
     }
 }
 
+
 class HTMLRequest(val url: String) : RemoteRequest {
     companion object {
         private val LINE_FEED = "\r\n"
+    }
+
+    init {
+        if (CookieHandler.getDefault() == null)
+            CookieHandler.setDefault(CookieManager(null, CookiePolicy.ACCEPT_ALL))
     }
 
     private fun getBoundary(): String {
