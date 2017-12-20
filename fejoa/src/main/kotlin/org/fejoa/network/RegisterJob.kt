@@ -1,44 +1,44 @@
 package org.fejoa.network
 
 import kotlinx.serialization.Serializable
-import org.fejoa.AuthParams
+import kotlinx.serialization.internal.StringSerializer
+import kotlinx.serialization.serializer
+import org.fejoa.LoginParams
 import org.fejoa.crypto.DH_GROUP
-import org.fejoa.crypto.CryptoHelper
-import org.fejoa.crypto.SecretKey
 import org.fejoa.crypto.UserKeyParams
 import org.fejoa.support.*
 
 
-suspend fun SecretKey.toBigInteger(): BigInteger {
-    val raw = CryptoHelper.crypto.encode(this).await().toHex()
-    return BigInteger(raw, 16)
-}
-
-
-class RegisterJob(val user: String, val authParams: AuthParams)
-    : SimpleRemoteJob<RemoteJob.Result>(false) {
-
+class RegisterJob(val user: String, val loginParams: LoginParams) : RemoteJob<RemoteJob.Result>() {
 
     @Serializable
-    class Params(val user: String, val authParams: AuthParams) {
+    class Params(val user: String, val loginParams: LoginParams) {
         constructor(user: String, userKeyParams: UserKeyParams, userKey: BigInteger, group: DH_GROUP)
-                : this(user, AuthParams(userKeyParams, group.params.g.modPow(userKey, group.params.p).toString(16), group))
+                : this(user, LoginParams(userKeyParams, group.params.g.modPow(userKey, group.params.p).toString(16), group))
     }
 
     companion object {
         val METHOD = "register"
     }
 
-    override fun getHeader(): String {
-        return JsonRPCRequest(id = id, method = METHOD, params = Params(user, authParams))
+    private fun getHeader(): String {
+        return JsonRPCRequest(id = id, method = METHOD, params = Params(user, loginParams))
                 .stringify(Params.serializer())
     }
 
-    suspend override fun handle(responseHeader: String, inStream: AsyncInStream): Result {
-        val response = JsonRPCResponse.parse<JsonRPCStatusResult>(JsonRPCStatusResult.serializer(),
-                responseHeader, id)
+    suspend override fun run(remoteRequest: RemoteRequest): Result {
+        val reply = remoteRequest.send(getHeader())
+        val responseHeader = reply.receiveHeader()
 
-        val params = response.result
-        return Result(params.status, params.message)
+        val response = try {
+            JsonRPCResult.parse(StringSerializer, responseHeader, id)
+        } catch (e: Exception) {
+            val error = JsonRPCError.parse(ErrorMessage::class.serializer(), responseHeader, id).error
+            return Result(ReturnType.ERROR, error.message)
+        }
+
+        return Result(ReturnType.OK, response.result)
     }
+
+
 }

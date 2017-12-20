@@ -1,7 +1,7 @@
 package org.fejoa.server
 
+import kotlinx.serialization.internal.StringSerializer
 import kotlinx.serialization.serializer
-import org.fejoa.network.Errors
 import org.fejoa.network.JsonRPCRequest
 import org.fejoa.network.PingJob
 
@@ -17,7 +17,7 @@ class JsonPingHandler : JsonRequestHandler(PingJob.METHOD) {
         val request = JsonRPCRequest.parse(PingJob.PingParam::class.serializer(), json)
         val text = request.params.text
 
-        val response = request.makeResponse(Errors.OK, text + " pong")
+        val response = request.makeResponse(text + " pong").stringify(StringSerializer)
         responseHandler.setResponseHeader(response)
 
         val bufferedReader = BufferedReader(InputStreamReader(data))

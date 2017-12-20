@@ -1,10 +1,10 @@
 package org.fejoa.server
 
+import kotlinx.serialization.internal.StringSerializer
 import kotlinx.serialization.serializer
-import org.fejoa.network.Errors
 import org.fejoa.network.JsonRPCRequest
 import org.fejoa.network.RegisterJob
-import org.fejoa.platformWriteAuthData
+import org.fejoa.platformWriteLoginData
 import java.io.*
 
 class RegisterHandler : JsonRequestHandler(RegisterJob.METHOD) {
@@ -14,9 +14,9 @@ class RegisterHandler : JsonRequestHandler(RegisterJob.METHOD) {
         val request = JsonRPCRequest.parse(RegisterJob.Params::class.serializer(), json)
         val params = request.params
 
-        platformWriteAuthData(session.baseDir, params.user, params.authParams)
+        platformWriteLoginData(session.baseDir, params.user, params.loginParams)
 
-        val response = request.makeResponse(Errors.OK, "User ${params.user} registered")
+        val response = request.makeResponse("User ${params.user} registered").stringify(StringSerializer)
         responseHandler.setResponseHeader(response)
     }
 }

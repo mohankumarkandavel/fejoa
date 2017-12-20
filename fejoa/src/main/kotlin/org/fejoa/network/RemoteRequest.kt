@@ -18,6 +18,9 @@ interface RemoteRequest {
         fun close()
     }
 
+    /**
+     * Send can be called multiple times to send multiple messages
+     */
     fun send(header: String): Reply
     fun sendData(header: String): DataSender
 }

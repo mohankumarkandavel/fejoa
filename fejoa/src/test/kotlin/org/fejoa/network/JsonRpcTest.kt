@@ -30,13 +30,13 @@ class JsonRpcTest {
         var failed = false
         try {
             val wrongId = id + 1
-            JsonRPCResponse.parse(JsonRPCStatusResult::class.serializer(), response, wrongId)
+            JsonRPCResult.parse(ErrorMessage::class.serializer(), response, wrongId)
         } catch (e: Exception) {
             failed = true
         }
         assertTrue(failed)
 
-        val parsedResponse = JsonRPCResponse.parse(JsonRPCStatusResult::class.serializer(), response, id)
+        val parsedResponse = JsonRPCResult.parse(ErrorMessage::class.serializer(), response, id)
         assertEquals("FromServer", parsedResponse.result.message)
     }
 }
