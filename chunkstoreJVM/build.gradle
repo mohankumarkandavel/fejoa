@@ -6,7 +6,7 @@ apply plugin: 'kotlin'
 apply plugin: 'kotlinx-serialization'
 
 repositories {
-    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
+    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap' }
     maven { url "https://kotlin.bintray.com/kotlinx" }
     mavenCentral()
 }

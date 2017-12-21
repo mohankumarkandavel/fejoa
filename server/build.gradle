@@ -7,7 +7,7 @@ apply plugin: 'kotlinx-serialization'
 sourceCompatibility = JavaVersion.VERSION_1_8
 
 repositories {
-    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
+    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap' }
     maven { url "https://kotlin.bintray.com/kotlinx" }
     mavenCentral()
 }

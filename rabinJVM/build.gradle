@@ -1,7 +1,7 @@
 apply plugin: 'kotlin-platform-jvm'
 
 repositories {
-    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap-1.2' }
+    maven { url 'http://dl.bintray.com/kotlin/kotlin-eap' }
     maven { url "https://kotlin.bintray.com/kotlinx" }
     mavenCentral()
 }
@@ -11,7 +11,6 @@ dependencies {
     compile project(":libJVM")
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-    compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$serialization_version"
 
     testCompile "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
     testCompile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
