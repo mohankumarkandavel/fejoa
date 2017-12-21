@@ -4,7 +4,6 @@ gen/**
 target/**
 build/**
 libs/**
-*/node_modules/*
 
 # other files
 **/.chunkstore/**
@@ -28,3 +27,9 @@ profiles_settings.xml
 .gradle
 */build/
 gradle-wrapper.jar
+
+
+# node and bower
+bower_components
+node_modules
+package-lock.json
