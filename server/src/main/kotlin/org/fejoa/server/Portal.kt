@@ -23,6 +23,7 @@ class Portal(private val baseDir: String) : AbstractHandler() {
         addJsonHandler(JsonPingHandler())
         addJsonHandler(RegisterHandler())
         addJsonHandler(LoginHandler())
+        addJsonHandler(LogoutHandler())
         addJsonHandler(AuthStatusHandler())
     }
 

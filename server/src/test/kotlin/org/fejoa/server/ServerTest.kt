@@ -87,6 +87,10 @@ class JettyTest {
         assertEquals(ReturnType.OK, authResult.code)
         assertEquals(1, AuthStatusJob().run(request).accounts.size)
         assertEquals(user, AuthStatusJob().run(request).accounts[0])
+
+        val logoutResult = LogoutJob(listOf(user)).run(request)
+        assertEquals(0, logoutResult.accounts.size)
+        assertEquals(0, AuthStatusJob().run(request).accounts.size)
     }
 }
 

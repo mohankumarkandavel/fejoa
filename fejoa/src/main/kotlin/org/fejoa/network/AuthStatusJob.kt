@@ -18,7 +18,7 @@ class AuthStatusJob() : RemoteJob<AuthStatusJob.Result>() {
     class Response(val accounts: List<String>)
 
     private fun getHeader(): String {
-        return JSON.Companion.stringify(JsonRPCSimpleRequest(id = id, method = METHOD))
+        return JSON.stringify(JsonRPCSimpleRequest(id = id, method = METHOD))
     }
 
     override suspend fun run(remoteRequest: RemoteRequest): Result {
