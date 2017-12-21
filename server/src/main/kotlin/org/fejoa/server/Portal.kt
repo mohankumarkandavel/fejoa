@@ -23,6 +23,7 @@ class Portal(private val baseDir: String) : AbstractHandler() {
         addJsonHandler(JsonPingHandler())
         addJsonHandler(RegisterHandler())
         addJsonHandler(LoginHandler())
+        addJsonHandler(AuthStatusHandler())
     }
 
     inner class ResponseHandler(private val response: HttpServletResponse) {

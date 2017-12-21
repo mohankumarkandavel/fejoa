@@ -6,6 +6,11 @@ import javax.servlet.http.HttpSession
 import kotlin.collections.HashMap
 
 
+class ServerAccessManager {
+    // account the user is logged into
+    val authenticatedAccounts: MutableSet<String> = HashSet()
+}
+
 class Session(val baseDir: String, private val session: HttpSession) {
     private val ROLES_KEY = "roles"
     private val LOGIN_COMPACTPAKE_PROVER_KEY = "loginCompactPAKEProver"
@@ -19,35 +24,6 @@ class Session(val baseDir: String, private val session: HttpSession) {
         return user + ":" + LOGIN_COMPACTPAKE_PROVER_KEY
     }
 
-    private fun makeRole(serverUser: String, role: String): String {
-        return serverUser + ":" + role
-    }
-
-    fun addRootRole(userName: String) {
-        addRole(userName, "root", AccessRight.ALL)
-    }
-
-    fun hasRootRole(serverUser: String): Boolean {
-        return getRoles().containsKey(makeRole(serverUser, "root"))
-    }
-
-
-    fun addRole(serverUser: String, role: String, rights: AccessRight) {
-        synchronized(getSessionLock()) {
-            val roles = getRoles()
-            roles.put(makeRole(serverUser, role), rights)
-            session.setAttribute(ROLES_KEY, roles)
-        }
-    }
-
-    fun getRoles(): HashMap<String, AccessRight> {
-        return session.getAttribute(ROLES_KEY)?.let { it as HashMap<String, AccessRight>} ?: return HashMap()
-    }
-
-    fun getRoleRights(serverUser: String, role: String): AccessRight {
-        return getRoles()[makeRole(serverUser, role)] ?: return AccessRight.NONE
-    }
-
     fun setLoginCompactPAKEProver(user: String, prover: CompactPAKE_SHA256_CTR.ProverState0?) {
         session.setAttribute(getLoginCompactPAKEProverKey(user), prover)
     }
@@ -55,4 +31,10 @@ class Session(val baseDir: String, private val session: HttpSession) {
     fun getLoginCompactPAKEProver(user: String): CompactPAKE_SHA256_CTR.ProverState0? {
         return session.getAttribute(getLoginCompactPAKEProverKey(user))?.let { it as CompactPAKE_SHA256_CTR.ProverState0}
     }
+
+    fun getServerAccessManager(): ServerAccessManager {
+        return session.getAttribute(ROLES_KEY)?.let { it as ServerAccessManager}
+                ?: return ServerAccessManager().also { session.setAttribute(ROLES_KEY, it) }
+    }
+
 }

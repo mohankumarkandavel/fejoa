@@ -76,8 +76,17 @@ class JettyTest {
         val readAuthParams = platformReadLoginData(SERVER_TEST_DIR, user)
         assertEquals(authParams, readAuthParams)
 
+        // assert we are not logged in
+        assertEquals(0, AuthStatusJob().run(request).accounts.size)
+
+        val failedAuthResult = LoginJob(user, "wrong password", keyCache).run(request)
+        assertEquals(ReturnType.ERROR, failedAuthResult.code)
+        assertEquals(0, AuthStatusJob().run(request).accounts.size)
+
         val authResult = LoginJob(user, password, keyCache).run(request)
         assertEquals(ReturnType.OK, authResult.code)
-
+        assertEquals(1, AuthStatusJob().run(request).accounts.size)
+        assertEquals(user, AuthStatusJob().run(request).accounts[0])
     }
 }
+

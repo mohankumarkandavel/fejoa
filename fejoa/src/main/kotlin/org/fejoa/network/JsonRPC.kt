@@ -8,7 +8,15 @@ import kotlinx.serialization.serializer
 val RPC_VERSION = "2.0"
 
 @Serializable
-class JsonRPCSimpleRequest(val jsonrpc: String = RPC_VERSION, val id: Int, val method: String)
+class JsonRPCSimpleRequest(val jsonrpc: String = RPC_VERSION, val id: Int, val method: String) {
+    fun makeError(error: ReturnType, message: String): String {
+        return JsonRPCMethodRequest.makeError(id, ErrorMessage(ensureError(error), message))
+    }
+
+    fun <T>makeResponse(result: T): JsonRPCResult<T> {
+        return JsonRPCResult(id, result)
+    }
+}
 
 @Serializable
 class JsonRPCRequest<T>(val jsonrpc: String = RPC_VERSION, val id: Int, val method: String, val params: T) {
