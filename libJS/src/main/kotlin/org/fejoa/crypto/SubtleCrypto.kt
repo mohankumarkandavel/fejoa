@@ -11,8 +11,8 @@ import kotlin.browser.window
 import kotlin.js.json
 
 
-class CryptoKeyWrapper(val key: CryptoKey, algorithm: String) : SecretKey {
-    override val algorithm: String = algorithm
+class CryptoKeyWrapper(val key: CryptoKey, type: CryptoSettings.KEY_TYPE) : SecretKey {
+    override val type: CryptoSettings.KEY_TYPE = type
 }
 
 class SubtleCrypto : CryptoInterface {
@@ -40,7 +40,7 @@ class SubtleCrypto : CryptoInterface {
                     true,
                     arrayOf("encrypt", "decrypt")).await()
 
-        return@async CryptoKeyWrapper(derivedKey, symKeyType.jsName)
+        return@async CryptoKeyWrapper(derivedKey, symKeyType)
     }
 
     override fun generateKeyPair(settings: CryptoSettings.KeyType): Future<KeyPair> {
@@ -94,15 +94,14 @@ class SubtleCrypto : CryptoInterface {
                 key,
                 json("name" to keyType),
                 true,
-                arrayOf("encrypt", "decrypt")).toFuture().then { CryptoKeyWrapper(it, keyType.jsName) }
+                arrayOf("encrypt", "decrypt")).toFuture().then { CryptoKeyWrapper(it, keyType) }
     }
 
-    override fun privateKeyFromRaw(key: ByteArray, keyType: String): Future<PrivateKey> {
+    override fun privateKeyFromRaw(key: ByteArray, type: CryptoSettings.KEY_TYPE): Future<PrivateKey> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override fun publicKeyFromRaw(key: ByteArray, keyType: String): Future<PublicKey> {
+    override fun publicKeyFromRaw(key: ByteArray, type: CryptoSettings.KEY_TYPE): Future<PublicKey> {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
-
 }
