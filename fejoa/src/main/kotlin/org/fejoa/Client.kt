@@ -75,7 +75,7 @@ class Client(val userData: UserData) {
 
             context.accountIO.writeUserDataConfig(userDataConfig)
             // TODO pull user data
-            
+
             return open(baseContext, namespace, passwordGetter.get(PasswordGetter.Purpose.OPEN_ACCOUNT,
                     "$namespace/$user"), executor)
 

@@ -5,7 +5,6 @@ import org.fejoa.support.PathUtils
 import java.io.*
 
 
-
 actual fun platformGetAccountIO(type: AccountIO.Type, context: String, namespace: String): AccountIO {
     return JVMAccountIO(context, namespace)
 }
@@ -13,7 +12,7 @@ actual fun platformGetAccountIO(type: AccountIO.Type, context: String, namespace
 
 class JVMAccountIO(val context: String, val namespace: String) : AccountIO {
     private fun accountDir(path: String, namespace: String): File {
-        return File(path, namespace)
+        return File(PathUtils.appendDir(path, namespace))
     }
 
     private fun authDataFile(accountDir: File): File {
