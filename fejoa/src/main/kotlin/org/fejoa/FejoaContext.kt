@@ -18,7 +18,7 @@ class FejoaContext(val accountType: AccountIO.Type, val context: String, val nam
 
     suspend fun getStorage(branch: String, symCredentials: SymBaseCredentials?, commitSignature: CommitSignature? = null,
                            ref: RepositoryRef? = null) : StorageDir {
-        val storage = platformCreateStorage().let {
+        val storage = platformCreateStorage(context).let {
             if (it.exists(namespace, branch)) {
                 val backend = it.open(namespace, branch)
                 val repositoryRef = ref ?: let {

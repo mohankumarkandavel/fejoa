@@ -1,3 +1,6 @@
 package org.fejoa.storage
 
-expect fun platformCreateStorage(): StorageBackend
+/**
+ * @context the storage context, e.g. the base directory path
+ */
+expect fun platformCreateStorage(context: String): StorageBackend

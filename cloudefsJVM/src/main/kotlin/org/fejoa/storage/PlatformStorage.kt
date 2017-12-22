@@ -4,15 +4,16 @@ import org.fejoa.chunkstore.ChunkStore
 import org.fejoa.repository.BranchLog
 import org.fejoa.repository.ChunkStoreBranchLog
 import org.fejoa.repository.toChunkTransaction
+import org.fejoa.support.PathUtils
 import java.io.File
 
 
-actual fun platformCreateStorage(): StorageBackend {
-    return ChunkStoreBackend()
+actual fun platformCreateStorage(context: String): StorageBackend {
+    return ChunkStoreBackend(context)
 }
 
-class ChunkStoreBackend : StorageBackend {
-    class ChunkStoreBranchBackend(val chunkStore: ChunkStore, val namespace: String, val branch: String)
+class ChunkStoreBackend(val baseDir: String) : StorageBackend {
+    class ChunkStoreBranchBackend(val chunkStore: ChunkStore, val baseDir: String, val namespace: String, val branch: String)
         : StorageBackend.BranchBackend {
         override fun getChunkStorage(): ChunkStorage {
             return object : ChunkStorage {
@@ -23,22 +24,26 @@ class ChunkStoreBackend : StorageBackend {
         }
 
         override fun getBranchLog(): BranchLog {
-            return ChunkStoreBranchLog(File(namespace), branch)
+            return ChunkStoreBranchLog(File(PathUtils.appendDir(baseDir, namespace)), branch)
         }
     }
 
+    private fun getFile(namespace: String): File {
+        return File(PathUtils.appendDir(baseDir, namespace))
+    }
+
     suspend override fun open(namespace: String, branch: String): StorageBackend.BranchBackend {
-        return ChunkStoreBranchBackend(ChunkStore.open(File(namespace), branch), namespace, branch)
+        return ChunkStoreBranchBackend(ChunkStore.open(getFile(namespace), branch), baseDir, namespace, branch)
     }
 
     suspend override fun create(namespace: String, branch: String): StorageBackend.BranchBackend {
-        val dir = File(namespace)
+        val dir = getFile(namespace)
         dir.mkdirs()
-        return ChunkStoreBranchBackend(ChunkStore.create(dir, branch), namespace, branch)
+        return ChunkStoreBranchBackend(ChunkStore.create(dir, branch), baseDir, namespace, branch)
     }
 
     suspend override fun exists(namespace: String, branch: String): Boolean {
-        return ChunkStore.exists(File(namespace), branch)
+        return ChunkStore.exists(getFile(namespace), branch)
     }
 
     suspend override fun delete(namespace: String, branch: String) {
@@ -46,6 +51,6 @@ class ChunkStoreBackend : StorageBackend {
     }
 
     suspend override fun deleteNamespace(namespace: String) {
-        File(namespace).deleteRecursively()
+        getFile(namespace).deleteRecursively()
     }
 }
