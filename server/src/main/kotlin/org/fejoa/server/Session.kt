@@ -9,6 +9,10 @@ import kotlin.collections.HashMap
 class ServerAccessManager {
     // account the user is logged into
     val authenticatedAccounts: MutableSet<String> = HashSet()
+
+    fun hasAccountAccess(user: String): Boolean {
+        return authenticatedAccounts.contains(user)
+    }
 }
 
 class Session(val baseDir: String, private val session: HttpSession) {

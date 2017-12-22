@@ -27,13 +27,13 @@ class ServerData(val outQueue: String, val inQueue: String, val accessStore: Str
  * @param extra unencrypted data
  */
 @Serializable
-class UserDataSettings(val encMasterKey: PasswordProtectedKey,
-                       val userData: EncData, val serverData: ServerData) {
+class UserDataConfig(val encMasterKey: PasswordProtectedKey,
+                     val userData: EncData, val serverData: ServerData) {
     companion object {
         suspend fun create(masterKey: SecretKey, password: String, userKeyParams: UserKeyParams,
                            userData: UserDataRef,
                            outQueue: String, inQueue: String, accessStore: String,
-                           cache: BaseKeyCache): UserDataSettings {
+                           cache: BaseKeyCache): UserDataConfig {
             // encrypt the master key
             val encMasterKey = PasswordProtectedKey.create(masterKey, userKeyParams, password, cache)
 
@@ -43,7 +43,7 @@ class UserDataSettings(val encMasterKey: PasswordProtectedKey,
             val data = JSON(indented = true).stringify(userData).toUTF()
             val encrypted = CryptoHelper.crypto.encryptSymmetric(data, masterKey, iv, settings).await()
 
-            return UserDataSettings(encMasterKey, EncData(encrypted, iv, settings),
+            return UserDataConfig(encMasterKey, EncData(encrypted, iv, settings),
                     ServerData(outQueue, inQueue, accessStore))
         }
     }
@@ -60,6 +60,3 @@ class UserDataSettings(val encMasterKey: PasswordProtectedKey,
         return JSON.parse(plain.toUTFString())
     }
 }
-
-expect fun platformWriteUserDataSettings(namespace: String, userDataSettings: UserDataSettings)
-expect fun platformReadUserDataSettings(namespace: String): UserDataSettings

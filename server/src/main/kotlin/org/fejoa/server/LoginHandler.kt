@@ -2,9 +2,10 @@ package org.fejoa.server
 
 import kotlinx.coroutines.experimental.runBlocking
 import kotlinx.serialization.serializer
+import org.fejoa.AccountIO
 import org.fejoa.crypto.CompactPAKE_SHA256_CTR
 import org.fejoa.network.*
-import org.fejoa.platformReadLoginData
+import org.fejoa.platformGetAccountIO
 import java.io.InputStream
 
 
@@ -33,7 +34,7 @@ class LoginHandler : JsonRequestHandler(LoginJob.METHOD) {
         session.setLoginCompactPAKEProver(params.user, null)
 
         val loginData = try {
-            platformReadLoginData(session.baseDir, params.user)
+            platformGetAccountIO(AccountIO.Type.SERVER, session.baseDir, params.user).readLoginData()
         } catch (e: Exception) {
             responseHandler.setResponseHeader(request.makeError(ReturnType.ERROR, "Invalid user"))
             return@runBlocking

@@ -1,20 +1,20 @@
 package org.fejoa.server
 
 import kotlinx.coroutines.experimental.runBlocking
-import org.fejoa.LoginParams
+import org.fejoa.*
 import org.fejoa.crypto.*
 import org.fejoa.network.*
-import org.fejoa.platformReadLoginData
 
 import java.io.File
 import java.util.ArrayList
 
 import org.fejoa.server.JettyServer.Companion.DEFAULT_PORT
-import org.fejoa.support.encodeBase64
+import org.fejoa.support.PathUtils
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 
 class JettyTest {
@@ -73,9 +73,13 @@ class JettyTest {
         val registerResult = RegisterJob(user, authParams).run(request)
         assertEquals(ReturnType.OK, registerResult.code)
 
-        val readAuthParams = platformReadLoginData(SERVER_TEST_DIR, user)
+        val serverAccountIO = platformGetAccountIO(AccountIO.Type.SERVER, SERVER_TEST_DIR, user)
+        val readAuthParams = serverAccountIO.readLoginData()
         assertEquals(authParams, readAuthParams)
 
+        assertEquals(1, AuthStatusJob().run(request).accounts.size)
+        var logoutResult = LogoutJob(listOf(user)).run(request)
+        assertEquals(0, logoutResult.accounts.size)
         // assert we are not logged in
         assertEquals(0, AuthStatusJob().run(request).accounts.size)
 
@@ -88,9 +92,34 @@ class JettyTest {
         assertEquals(1, AuthStatusJob().run(request).accounts.size)
         assertEquals(user, AuthStatusJob().run(request).accounts[0])
 
-        val logoutResult = LogoutJob(listOf(user)).run(request)
+        logoutResult = LogoutJob(listOf(user)).run(request)
         assertEquals(0, logoutResult.accounts.size)
         assertEquals(0, AuthStatusJob().run(request).accounts.size)
+    }
+
+    @Test
+    fun testUserDataCreation() = runBlocking {
+        val user = "user"
+        val password = "password"
+        val clientDir = PathUtils.appendDir(TEST_DIR, "userDataCreation")
+
+        val userData1 = Client.create(clientDir, user, password)
+
+        userData1.registerAccount(url, user, password)
+
+        val serverAccountIO = platformGetAccountIO(AccountIO.Type.SERVER, SERVER_TEST_DIR, user)
+        assertTrue(serverAccountIO.exists())
+
+        val passwordGetter = object : PasswordGetter {
+            suspend override fun get(purpose: PasswordGetter.Purpose, resource: String, info: String): String {
+                return password
+            }
+        }
+
+        val userData2 = Client.retrieveAccount(clientDir, "userDir2", url,
+                user, passwordGetter)
+
+
     }
 }
 

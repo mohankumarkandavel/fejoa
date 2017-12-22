@@ -61,8 +61,8 @@ class UserData private constructor(val context: FejoaContext, val masterKey: Sym
         return null
     }
 
-    suspend fun getUserDataSettings(password: String, userKeyParams: UserKeyParams): UserDataSettings {
-        return UserDataSettings.create(masterKey.key, password, userKeyParams,
+    suspend fun getUserDataSettings(password: String, userKeyParams: UserKeyParams): UserDataConfig {
+        return UserDataConfig.create(masterKey.key, password, userKeyParams,
                 UserDataRef(branch, masterKey.settings),
                 "", "", "",
                 context.baseKeyCache)

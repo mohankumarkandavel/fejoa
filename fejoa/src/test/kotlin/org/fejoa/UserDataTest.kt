@@ -21,6 +21,7 @@ class UserDataTest {
 
     @Test
     fun testCreateOpen() = runBlocking {
+        val contextPath = ""
         val namespace = "testCreateOpen"
         val password = "Password"
         cleanUp += namespace
@@ -32,9 +33,9 @@ class UserDataTest {
                 UserKeyParams(BaseKeyParams(CryptoSettings.default.kdf, CryptoHelper.crypto.generateSalt16()),
                         CryptoSettings.HASH_TYPE.SHA256,
                         CryptoSettings.KEY_TYPE.AES, CryptoHelper.crypto.generateSalt16()))
-        platformWriteUserDataSettings(namespace, settings)
+        platformWriteUserDataConfig(contextPath, namespace, settings)
 
-        val loadedSettings = platformReadUserDataSettings(namespace)
+        val loadedSettings = platformReadUserDataConfig(contextPath, namespace)
 
         val newContext = FejoaContext(namespace, NowExecutor())
         val plainUserDataSettings = loadedSettings.open(password, newContext.baseKeyCache)

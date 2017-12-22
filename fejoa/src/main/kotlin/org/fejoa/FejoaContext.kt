@@ -12,8 +12,9 @@ import org.fejoa.support.Executor
 import org.fejoa.support.await
 
 
-class FejoaContext(val namespace: String, val executor: Executor) {
+class FejoaContext(val accountType: AccountIO.Type, val context: String, val namespace: String, val executor: Executor) {
     val baseKeyCache = BaseKeyCache()
+    val accountIO = platformGetAccountIO(accountType, context, namespace)
 
     suspend fun getStorage(branch: String, symCredentials: SymBaseCredentials?, commitSignature: CommitSignature? = null,
                            ref: RepositoryRef? = null) : StorageDir {
