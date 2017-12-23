@@ -36,7 +36,7 @@ class LoginHandler : JsonRequestHandler(LoginJob.METHOD) {
         val loginData = try {
             platformGetAccountIO(AccountIO.Type.SERVER, session.baseDir, params.user).readLoginData()
         } catch (e: Exception) {
-            responseHandler.setResponseHeader(request.makeError(ReturnType.ERROR, "Invalid user"))
+            responseHandler.setResponseHeader(request.makeError(ReturnType.ERROR, "User ${params.user} does not exists"))
             return@runBlocking
         }
 

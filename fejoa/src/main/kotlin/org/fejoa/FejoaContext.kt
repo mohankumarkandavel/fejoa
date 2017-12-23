@@ -13,6 +13,7 @@ import org.fejoa.support.await
 
 
 class FejoaContext(val accountType: AccountIO.Type, val context: String, val namespace: String, val executor: Executor) {
+    var passwordGetter: PasswordGetter = CanceledPasswordGetter()
     val baseKeyCache = BaseKeyCache()
     val accountIO = platformGetAccountIO(accountType, context, namespace)
 

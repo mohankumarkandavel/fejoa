@@ -103,9 +103,9 @@ class JettyTest {
         val password = "password"
         val clientDir = PathUtils.appendDir(TEST_DIR, "userDataCreation")
 
-        val userData1 = Client.create(clientDir, user, password)
+        val client1 = Client.create(clientDir, user, password)
 
-        userData1.registerAccount(url, user, password)
+        client1.registerAccount(user, url, password)
 
         val serverAccountIO = platformGetAccountIO(AccountIO.Type.SERVER, SERVER_TEST_DIR, user)
         assertTrue(serverAccountIO.exists())
@@ -116,7 +116,7 @@ class JettyTest {
             }
         }
 
-        val userData2 = Client.retrieveAccount(clientDir, "userDir2", url,
+        val client2 = Client.retrieveAccount(clientDir, "userDir2", url,
                 user, passwordGetter)
 
 
