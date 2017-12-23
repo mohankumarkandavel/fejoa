@@ -1,5 +1,6 @@
 package org.fejoa.network
 
+import kotlinx.serialization.internal.IntSerializer
 import kotlinx.serialization.internal.StringSerializer
 import kotlinx.serialization.serializer
 import kotlin.test.Test
@@ -24,7 +25,7 @@ class JsonRpcTest {
         assertEquals("test", parsedRequest.params)
 
         // create a response for the client
-        val response = parsedRequest.makeResponse(0, "FromServer")
+        val response = parsedRequest.makeResponse(5).stringify(IntSerializer)
 
         // at client:
         var failed = false
@@ -36,7 +37,7 @@ class JsonRpcTest {
         }
         assertTrue(failed)
 
-        val parsedResponse = JsonRPCResult.parse(ErrorMessage::class.serializer(), response, id)
-        assertEquals("FromServer", parsedResponse.result.message)
+        val parsedResponse = JsonRPCResult.parse(IntSerializer, response, id)
+        assertEquals(5, parsedResponse.result)
     }
 }

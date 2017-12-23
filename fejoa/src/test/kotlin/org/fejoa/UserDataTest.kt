@@ -14,7 +14,7 @@ class UserDataTest {
 
     @AfterTest
     fun cleanUp() = runBlocking {
-        val backend = platformCreateStorage()
+        val backend = platformCreateStorage("")
         for (namespace in cleanUp)
             backend.deleteNamespace(namespace)
     }
@@ -25,7 +25,7 @@ class UserDataTest {
         val namespace = "testCreateOpen"
         val password = "Password"
         cleanUp += namespace
-        val context = FejoaContext(namespace, NowExecutor())
+        val context = FejoaContext(AccountIO.Type.CLIENT, "", namespace, NowExecutor())
         val userData = UserData.create(context)
         userData.commit()
 
@@ -33,11 +33,11 @@ class UserDataTest {
                 UserKeyParams(BaseKeyParams(CryptoSettings.default.kdf, CryptoHelper.crypto.generateSalt16()),
                         CryptoSettings.HASH_TYPE.SHA256,
                         CryptoSettings.KEY_TYPE.AES, CryptoHelper.crypto.generateSalt16()))
-        platformWriteUserDataConfig(contextPath, namespace, settings)
+        context.accountIO.writeUserDataConfig(settings)
 
-        val loadedSettings = platformReadUserDataConfig(contextPath, namespace)
+        val loadedSettings = context.accountIO.readUserDataConfig()
 
-        val newContext = FejoaContext(namespace, NowExecutor())
+        val newContext = FejoaContext(AccountIO.Type.CLIENT, "", namespace, NowExecutor())
         val plainUserDataSettings = loadedSettings.open(password, newContext.baseKeyCache)
         val loadedUserData = UserData.open(newContext, plainUserDataSettings.first,
                 plainUserDataSettings.second.branch)
