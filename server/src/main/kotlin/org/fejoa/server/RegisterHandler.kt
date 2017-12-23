@@ -29,7 +29,7 @@ class RegisterHandler : JsonRequestHandler(RegisterJob.METHOD) {
         }
 
         // add the freshly registered user as authenticated
-        session.getServerAccessManager().authenticatedAccounts.add(params.user)
+        session.getServerAccessManager().addAccountAccess(params.user)
 
         val response = request.makeResponse("User ${params.user} registered").stringify(StringSerializer)
         responseHandler.setResponseHeader(response)

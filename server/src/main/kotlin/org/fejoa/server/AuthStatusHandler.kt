@@ -13,7 +13,7 @@ class AuthStatusHandler : JsonRequestHandler(AuthStatusJob.METHOD) {
 
         val request = JSON.Companion.parse<JsonRPCSimpleRequest>(json)
 
-        val authenticatedAccounts = session.getServerAccessManager().authenticatedAccounts.map { it }
+        val authenticatedAccounts = session.getServerAccessManager().getAuthAccounts().map { it }
         val response = request.makeResponse(AuthStatusJob.Response(authenticatedAccounts))
                 .stringify(AuthStatusJob.Response::class.serializer())
         responseHandler.setResponseHeader(response)

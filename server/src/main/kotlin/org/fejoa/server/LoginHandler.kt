@@ -66,7 +66,7 @@ class LoginHandler : JsonRequestHandler(LoginJob.METHOD) {
         }
 
         session.setLoginCompactPAKEProver(params.user, null)
-        session.getServerAccessManager().authenticatedAccounts.add(params.user)
+        session.getServerAccessManager().addAccountAccess(params.user)
 
         val response = request.makeResponse(LoginJob.CompactPakeFinishResponse(state1.getAuthToken()))
                 .stringify(LoginJob.CompactPakeFinishResponse::class.serializer())

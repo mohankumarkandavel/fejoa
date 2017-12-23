@@ -14,10 +14,10 @@ class LogoutHandler : JsonRequestHandler(LogoutJob.METHOD) {
 
         val accessManager = session.getServerAccessManager()
         request.params.users.forEach {
-            accessManager.authenticatedAccounts.remove(it)
+            accessManager.removeAccountAccess(it)
         }
 
-        val authenticatedAccounts = session.getServerAccessManager().authenticatedAccounts.map { it }
+        val authenticatedAccounts = session.getServerAccessManager().getAuthAccounts().map { it }
         val response = request.makeResponse(LogoutJob.Response(authenticatedAccounts))
                 .stringify(LogoutJob.Response::class.serializer())
         responseHandler.setResponseHeader(response)
