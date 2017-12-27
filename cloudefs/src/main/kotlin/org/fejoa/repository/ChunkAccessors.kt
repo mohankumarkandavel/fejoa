@@ -46,6 +46,36 @@ interface ChunkAccessors {
 }
 
 
+private fun prepareEncryption(accessor: ChunkAccessor, boxSpec: BoxSpec, crypto: SymBaseCredentials?): ChunkAccessor {
+    return when (boxSpec.encInfo.type) {
+        BoxSpec.EncryptionInfo.Type.PLAIN -> accessor
+        BoxSpec.EncryptionInfo.Type.PARENT -> {
+            val cryptoConfig = crypto ?: throw Exception("Missing crypto data")
+            accessor.encrypted(CryptoHelper.crypto, cryptoConfig.key, cryptoConfig.settings)
+        }
+    }
+}
+
+private fun prepareCompression(accessor: ChunkAccessor, boxSpec: BoxSpec): ChunkAccessor {
+    return when (boxSpec.zipType) {
+        BoxSpec.ZipType.NONE -> accessor
+        BoxSpec.ZipType.DEFLATE -> accessor.compressed()
+    }
+}
+
+fun ChunkAccessor.prepareAccessor(boxSpec: BoxSpec, crypto: SymBaseCredentials?): ChunkAccessor {
+    var accessor = this
+    if (boxSpec.zipBeforeEnc) {
+        // we have to prepare in reverse oder:
+        accessor = prepareEncryption(accessor, boxSpec, crypto)
+        accessor = prepareCompression(accessor, boxSpec)
+    } else {
+        accessor = prepareCompression(accessor, boxSpec)
+        accessor = prepareEncryption(accessor, boxSpec, crypto)
+    }
+    return accessor
+}
+
 class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryConfig,
                          val crypto: SymBaseCredentials?)
     : ChunkAccessors {
@@ -54,46 +84,16 @@ class RepoChunkAccessors(val storage: ChunkStorage, val repoConfig: RepositoryCo
         return object : ChunkAccessors.Transaction {
             val chunkStorageTransaction = storage.startTransaction()
 
-            private fun prepareEncryption(accessor: ChunkAccessor): ChunkAccessor {
-                return when (repoConfig.boxSpec.encInfo.type) {
-                    BoxSpec.EncryptionInfo.Type.PLAIN -> accessor
-                    BoxSpec.EncryptionInfo.Type.PARENT -> {
-                        val cryptoConfig = crypto ?: throw Exception("Missing crypto data")
-                        accessor.encrypted(CryptoHelper.crypto, cryptoConfig.key, cryptoConfig.settings)
-                    }
-                }
-            }
-
-            private fun prepareCompression(accessor: ChunkAccessor): ChunkAccessor {
-                return when (repoConfig.boxSpec.zipType) {
-                    BoxSpec.ZipType.NONE -> accessor
-                    BoxSpec.ZipType.DEFLATE -> accessor.compressed()
-                }
-            }
-
-            private fun prepareAccessor(): ChunkAccessor {
-                var accessor = chunkStorageTransaction.toChunkAccessor()
-                if (repoConfig.boxSpec.zipBeforeEnc) {
-                    // we have to prepare in reverse oder:
-                    accessor = prepareEncryption(accessor)
-                    accessor = prepareCompression(accessor)
-                } else {
-                    accessor = prepareCompression(accessor)
-                    accessor = prepareEncryption(accessor)
-                }
-                return accessor
-            }
-
             override fun getRawAccessor(): ChunkTransaction {
                 return chunkStorageTransaction
             }
 
             override fun getTreeAccessor(spec: ContainerSpec): ChunkAccessor {
-                return prepareAccessor()
+                return chunkStorageTransaction.toChunkAccessor().prepareAccessor(repoConfig.boxSpec, crypto)
             }
 
             override fun getFileAccessor(spec: ContainerSpec, filePath: String): ChunkAccessor {
-                return prepareAccessor()
+                return chunkStorageTransaction.toChunkAccessor().prepareAccessor(repoConfig.boxSpec, crypto)
             }
 
             override fun finishTransaction(): Future<Unit> {

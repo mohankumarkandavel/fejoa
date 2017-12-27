@@ -340,7 +340,7 @@ class ObjectIndexEntryList(val chunkContainer: ChunkContainer, var startOffset: 
 
 class ObjectIndex private constructor(val config: RepositoryConfig, val chunkContainer: ChunkContainer,
                                       var version: Version, var parent: ChunkContainerRef,
-                                      val entries: ObjectIndexEntryList) {
+                                      val entries: ObjectIndexEntryList, val transaction: ChunkAccessors.Transaction) {
     enum class Version(val value: Int) {
         V1(1)
     }
@@ -350,12 +350,12 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
         val TREE_ID = "tree"
         val BLOB_ID = "b/"
 
-        fun create(config: RepositoryConfig, chunkContainer: ChunkContainer): ObjectIndex {
+        fun create(config: RepositoryConfig, chunkContainer: ChunkContainer, transaction: ChunkAccessors.Transaction): ObjectIndex {
             return ObjectIndex(config, chunkContainer, Version.V1,
-            ChunkContainerRef(config.hashSpec, config.boxSpec), ObjectIndexEntryList(chunkContainer))
+            ChunkContainerRef(config.hashSpec, config.boxSpec), ObjectIndexEntryList(chunkContainer), transaction)
         }
 
-        suspend fun open(config: RepositoryConfig, chunkContainer: ChunkContainer): ObjectIndex {
+        suspend fun open(config: RepositoryConfig, chunkContainer: ChunkContainer, transaction: ChunkAccessors.Transaction): ObjectIndex {
             val inputStream = ChunkContainerRandomDataAccess(chunkContainer, RandomDataAccess.Mode.READ)
 
             val versionValue = inputStream.read()
@@ -365,7 +365,7 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
             val recentEntries = ObjectIndexEntryList.read(chunkContainer, inputStream.position())
             inputStream.close()
 
-            return ObjectIndex(config, chunkContainer, version, parent, recentEntries)
+            return ObjectIndex(config, chunkContainer, version, parent, recentEntries, transaction)
         }
     }
 
@@ -460,7 +460,8 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
     fun getChunkAccessor(ref: ChunkContainerRef): ChunkAccessor {
         return when (ref.boxSpec.encInfo.type) {
             BoxSpec.EncryptionInfo.Type.PARENT -> chunkContainer.blobAccessor
-            BoxSpec.EncryptionInfo.Type.PLAIN -> TODO("We need access to the plain chunk accessor")
+            BoxSpec.EncryptionInfo.Type.PLAIN
+                -> transaction.getRawAccessor().toChunkAccessor().prepareAccessor(ref.boxSpec, null)
         }
     }
 

@@ -137,7 +137,7 @@ class Repository private constructor(private val branch: String,
             val transaction = accessors.startTransaction()
             val objectIndexCC = ChunkContainer.create(transaction.getObjectIndexAccessor(containerSpec),
                     containerSpec)
-            val objectIndex = ObjectIndex.create(config, objectIndexCC)
+            val objectIndex = ObjectIndex.create(config, objectIndexCC, transaction)
             return Repository(branch, branchBackend, accessors, transaction, log, objectIndex, config, crypto)
         }
 
@@ -151,7 +151,7 @@ class Repository private constructor(private val branch: String,
             val transaction = accessors.startTransaction()
             val objectIndexCC = ChunkContainer.read(transaction.getObjectIndexAccessor(containerSpec),
                     ref.objectIndexRef)
-            val objectIndex = ObjectIndex.open(repoConfig, objectIndexCC)
+            val objectIndex = ObjectIndex.open(repoConfig, objectIndexCC, transaction)
 
             val repository = Repository(branch, branchBackend, accessors, transaction, log, objectIndex, repoConfig,
                     crypto)
