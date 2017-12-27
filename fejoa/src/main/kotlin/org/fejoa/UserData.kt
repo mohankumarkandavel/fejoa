@@ -1,5 +1,6 @@
 package org.fejoa
 
+import kotlinx.serialization.json.JSON
 import org.fejoa.crypto.*
 import org.fejoa.repository.DefaultCommitSignature
 import org.fejoa.storage.*
@@ -12,9 +13,31 @@ class User(val storageDir: StorageDir) {
     val defaultSigningCredential = DBHashValue(storageDir, "signing/default")
 }
 
+
+class RemoteDBValue(parent: DBObject, relativePath: String) : DBValue<Remote>(parent, relativePath) {
+    suspend override fun write(obj: Remote) {
+        dir.writeString(path, JSON.stringify(obj))
+    }
+
+    suspend override fun get(): Remote {
+        return JSON.parse(dir.readString(path))
+    }
+}
+
+class RemoteDBMap(dir: IOStorageDir, path: String) : DBMap<HashValue, RemoteDBValue>(dir, path) {
+    suspend override fun list(): Collection<String> {
+        return dir.listFiles(path)
+    }
+
+    override fun get(key: HashValue): RemoteDBValue {
+        return RemoteDBValue(this, key.toHex())
+    }
+}
+
 class UserData private constructor(val context: FejoaContext, val masterKey: SymBaseCredentials, storageDir: StorageDir)
     : StorageDirObject(storageDir) {
     val user = User(storageDir)
+    val remotes = RemoteDBMap(storageDir, "remotes")
 
     companion object {
         suspend fun create(context: FejoaContext, settings: CryptoSettings = CryptoSettings.default): UserData {
