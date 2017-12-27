@@ -28,6 +28,7 @@ class BranchLogList(val entries: MutableList<BranchLogEntry> = ArrayList()) {
 
 
 interface BranchLog {
+    fun getBranchName(): String
     fun add(id: HashValue, message: String, changes: List<HashValue>): Future<Unit>
     fun add(entry: BranchLogEntry): Future<Unit>
     fun getEntries(): Future<List<BranchLogEntry>>

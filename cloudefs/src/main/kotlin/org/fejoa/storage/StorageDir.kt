@@ -21,6 +21,10 @@ class StorageDir : IOStorageDir {
     private val storageDirCache: StorageDirCache
         get() = database as StorageDirCache
 
+    fun getBackingDatabase(): Database {
+        return (database as StorageDirCache).database
+    }
+
     suspend fun getHead(): Hash {
         return storageDirCache.getHead()
     }
@@ -65,7 +69,7 @@ class StorageDir : IOStorageDir {
     /**
      * The StorageDirCache is shared between all StorageDir that are build from the same parent.
      */
-    internal class StorageDirCache(database: Database, var commitSignature: CommitSignature?,
+    internal class StorageDirCache(val database: Database, var commitSignature: CommitSignature?,
                                    val listenerExecutor: Executor?) : Database by database {
         private val listeners: MutableList<IListener> = ArrayList()
 

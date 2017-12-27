@@ -1,10 +1,12 @@
 package org.fejoa
 
+import org.fejoa.repository.sync.AccessRight
+
 
 /**
  * Keeps track about auth status at a remote.
  */
-class AccessTracker {
+class AccessTracker(val noAccessControl: Boolean = false) {
     // account the user is logged into
     private val authAccounts: MutableSet<String> = HashSet()
 
@@ -22,5 +24,12 @@ class AccessTracker {
 
     fun hasAccountAccess(user: String): Boolean {
         return authAccounts.contains(user)
+    }
+
+    fun getBranchAccessRights(user: String, branch: String): AccessRight {
+        return if (hasAccountAccess(user) || noAccessControl)
+            AccessRight.ALL
+        else
+            TODO()
     }
 }

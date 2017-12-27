@@ -1,7 +1,12 @@
 package org.fejoa.network
 
+import kotlinx.serialization.Serializable
 import org.fejoa.support.AsyncInStream
 import org.fejoa.support.AsyncOutStream
+
+
+@Serializable
+class RPCPipeResponse(val message: String)
 
 /**
  * Provides an OutputStream to send data and an InputStream to receive the reply.

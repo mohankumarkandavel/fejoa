@@ -44,6 +44,4 @@ class RegisterJob(val user: String, val loginParams: LoginParams, val userDataCo
 
         return Result(ReturnType.OK, response.result)
     }
-
-
 }

@@ -20,4 +20,6 @@ interface StorageBackend {
     suspend fun exists(namespace: String, branch: String): Boolean
     suspend fun delete(namespace: String, branch: String)
     suspend fun deleteNamespace(namespace: String)
+
+    suspend fun listBranches(namespace: String): Collection<BranchLog>
 }

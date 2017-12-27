@@ -26,6 +26,7 @@ class Portal(private val baseDir: String) : AbstractHandler() {
         addJsonHandler(LogoutHandler())
         addJsonHandler(AuthStatusHandler())
         addJsonHandler(RetrieveUserDataConfigHandler())
+        addJsonHandler(BranchRequestHandler())
     }
 
     inner class ResponseHandler(private val response: HttpServletResponse) {
@@ -44,12 +45,10 @@ class Portal(private val baseDir: String) : AbstractHandler() {
             builder.addTextBody(HTMLRequestMultipartKeys.MESSAGE_KEY, header, ContentType.DEFAULT_TEXT)
         }
 
-        fun addData(): OutputStream? {
+        fun addData(): OutputStream {
             if (!isHandled)
-                return null
-            if (outputStream == null)
-                outputStream = ByteArrayOutputStream()
-            return outputStream
+                return throw Exception("Unhandled")
+            return outputStream ?: ByteArrayOutputStream().also { outputStream = it }
         }
 
         @Throws(IOException::class)

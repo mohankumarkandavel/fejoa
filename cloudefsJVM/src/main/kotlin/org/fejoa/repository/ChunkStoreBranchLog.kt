@@ -7,6 +7,7 @@ import org.fejoa.storage.HashValue
 import org.fejoa.storage.HashValueDataSerializer
 import org.fejoa.support.Future
 import org.fejoa.support.Future.Companion.completedFuture
+import org.fejoa.support.await
 
 import java.io.*
 import java.util.*
@@ -18,7 +19,7 @@ import java.util.concurrent.locks.Lock
  * 1) log: contains a list of previous versions
  * 2) head: points to the latest or topmost commit
  */
-class ChunkStoreBranchLog(logDir: File, branch: String, remote: String? = null) : BranchLog {
+class ChunkStoreBranchLog(logDir: File, val branch: String, remote: String? = null) : BranchLog {
     private val headFile: File
     private val logFile: File
     private val fileLock: Lock
@@ -46,6 +47,10 @@ class ChunkStoreBranchLog(logDir: File, branch: String, remote: String? = null) 
 
     private fun unlock() {
         fileLock.unlock()
+    }
+
+    override fun getBranchName(): String {
+        return branch
     }
 
     @Throws(IOException::class)
@@ -133,6 +138,26 @@ class ChunkStoreBranchLog(logDir: File, branch: String, remote: String? = null) 
     companion object {
         private fun getLocalDir(logDir: File): File {
             return File(logDir, "local")
+        }
+
+        suspend fun listLocalBranches(repoDir: File): Collection<BranchLog> {
+            val dir = getLocalDir(repoDir)
+            val branches = ArrayList<BranchLog>()
+            val dirContent = dir.list() ?: return branches
+            for (branch in dirContent) {
+                val subEntry = File(dir, branch)
+                if (subEntry.isFile)
+                    continue
+                try {
+                    val branchLog = ChunkStoreBranchLog(repoDir, branch)
+                    if (branchLog.getHead().await() != null)
+                        branches.add(branchLog)
+                } catch (e: IOException) {
+                    continue
+                }
+
+            }
+            return branches
         }
     }
 }

@@ -6,7 +6,7 @@ import org.fejoa.support.*
 object Request {
     val PROTOCOL_VERSION = 1
 
-    val CS_REQUEST_METHOD = "csRequest"
+    val BRANCH_REQUEST_METHOD = "branchRequest"
 
     // requests
     enum class RequestType(val value: Int) {

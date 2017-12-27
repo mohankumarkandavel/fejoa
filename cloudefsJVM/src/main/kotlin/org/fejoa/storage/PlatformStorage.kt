@@ -32,25 +32,29 @@ class ChunkStoreBackend(val baseDir: String) : StorageBackend {
         return File(PathUtils.appendDir(baseDir, namespace))
     }
 
-    suspend override fun open(namespace: String, branch: String): StorageBackend.BranchBackend {
+    override suspend fun open(namespace: String, branch: String): StorageBackend.BranchBackend {
         return ChunkStoreBranchBackend(ChunkStore.open(getFile(namespace), branch), baseDir, namespace, branch)
     }
 
-    suspend override fun create(namespace: String, branch: String): StorageBackend.BranchBackend {
+    override suspend fun create(namespace: String, branch: String): StorageBackend.BranchBackend {
         val dir = getFile(namespace)
         dir.mkdirs()
         return ChunkStoreBranchBackend(ChunkStore.create(dir, branch), baseDir, namespace, branch)
     }
 
-    suspend override fun exists(namespace: String, branch: String): Boolean {
+    override suspend fun exists(namespace: String, branch: String): Boolean {
         return ChunkStore.exists(getFile(namespace), branch)
     }
 
-    suspend override fun delete(namespace: String, branch: String) {
+    override suspend fun delete(namespace: String, branch: String) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    suspend override fun deleteNamespace(namespace: String) {
+    override suspend fun deleteNamespace(namespace: String) {
         getFile(namespace).deleteRecursively()
+    }
+
+    override suspend fun listBranches(namespace: String): Collection<BranchLog> {
+        return ChunkStoreBranchLog.listLocalBranches(getFile(namespace))
     }
 }

@@ -14,8 +14,9 @@ import org.fejoa.support.await
 
 class FejoaContext(val accountType: AccountIO.Type, val context: String, val namespace: String, val executor: Executor) {
     var passwordGetter: PasswordGetter = CanceledPasswordGetter()
-    val baseKeyCache = BaseKeyCache()
-    val accountIO = platformGetAccountIO(accountType, context, namespace)
+    val baseKeyCache by lazy { BaseKeyCache() }
+    val accountIO by lazy { platformGetAccountIO(accountType, context, namespace) }
+    val platformStorage by lazy { platformCreateStorage(context) }
 
     suspend fun getStorage(branch: String, symCredentials: SymBaseCredentials?, commitSignature: CommitSignature? = null,
                            ref: RepositoryRef? = null) : StorageDir {
@@ -37,7 +38,7 @@ class FejoaContext(val accountType: AccountIO.Type, val context: String, val nam
                 repo
             } else {
                 val backend = it.create(namespace, branch)
-                Repository.create(branch, backend, getRepoConfig(), symCredentials)
+                Repository.create(branch, backend, getRepoConfig(symCredentials), symCredentials)
             }
         }
 
@@ -51,12 +52,17 @@ class FejoaContext(val accountType: AccountIO.Type, val context: String, val nam
             RepositoryBuilder.getEncryptedBranchLogIO(credentials.key, credentials.settings)
     }
 
-    private fun getRepoConfig(): RepositoryConfig {
+    private fun getRepoConfig(symCredentials: SymBaseCredentials?): RepositoryConfig {
         val seed = CryptoHelper.crypto.generateSalt16()
         val hashSpec = HashSpec.createCyclicPoly(HashSpec.HashType.FEJOA_CYCLIC_POLY_2KB_8KB, seed)
 
+        val cryptoType = if (symCredentials != null)
+            BoxSpec.EncryptionInfo.Type.PARENT
+        else
+            BoxSpec.EncryptionInfo.Type.PLAIN
+
         val boxSpec = BoxSpec(
-                encInfo = BoxSpec.EncryptionInfo(BoxSpec.EncryptionInfo.Type.PARENT),
+                encInfo = BoxSpec.EncryptionInfo(cryptoType),
                 zipType = BoxSpec.ZipType.DEFLATE,
                 zipBeforeEnc = true
         )
