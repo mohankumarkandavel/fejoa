@@ -96,7 +96,7 @@ internal class GetObjectIndexJob(parent: Job?, val transaction: ChunkAccessors.T
         doneCount++
 
         // we only read the chunk container so we don't need a config
-        objectIndex = ObjectIndex.open(config, chunkContainer!!, transaction)
+        objectIndex = ObjectIndex.open(config, chunkContainer!!, transaction.getRawAccessor())
         chunkFetcher.enqueueObjectIndexJob(objectIndex!!)
     }
 }

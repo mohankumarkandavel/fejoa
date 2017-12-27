@@ -340,7 +340,7 @@ class ObjectIndexEntryList(val chunkContainer: ChunkContainer, var startOffset: 
 
 class ObjectIndex private constructor(val config: RepositoryConfig, val chunkContainer: ChunkContainer,
                                       var version: Version, var parent: ChunkContainerRef,
-                                      val entries: ObjectIndexEntryList, val transaction: ChunkAccessors.Transaction) {
+                                      val entries: ObjectIndexEntryList, val transaction: ChunkTransaction) {
     enum class Version(val value: Int) {
         V1(1)
     }
@@ -350,12 +350,12 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
         val TREE_ID = "tree"
         val BLOB_ID = "b/"
 
-        fun create(config: RepositoryConfig, chunkContainer: ChunkContainer, transaction: ChunkAccessors.Transaction): ObjectIndex {
+        fun create(config: RepositoryConfig, chunkContainer: ChunkContainer, transaction: ChunkTransaction): ObjectIndex {
             return ObjectIndex(config, chunkContainer, Version.V1,
             ChunkContainerRef(config.hashSpec, config.boxSpec), ObjectIndexEntryList(chunkContainer), transaction)
         }
 
-        suspend fun open(config: RepositoryConfig, chunkContainer: ChunkContainer, transaction: ChunkAccessors.Transaction): ObjectIndex {
+        suspend fun open(config: RepositoryConfig, chunkContainer: ChunkContainer, transaction: ChunkTransaction): ObjectIndex {
             val inputStream = ChunkContainerRandomDataAccess(chunkContainer, RandomDataAccess.Mode.READ)
 
             val versionValue = inputStream.read()
@@ -461,7 +461,7 @@ class ObjectIndex private constructor(val config: RepositoryConfig, val chunkCon
         return when (ref.boxSpec.encInfo.type) {
             BoxSpec.EncryptionInfo.Type.PARENT -> chunkContainer.blobAccessor
             BoxSpec.EncryptionInfo.Type.PLAIN
-                -> transaction.getRawAccessor().toChunkAccessor().prepareAccessor(ref.boxSpec, null)
+                -> transaction.toChunkAccessor().prepareAccessor(ref.boxSpec, null)
         }
     }
 
