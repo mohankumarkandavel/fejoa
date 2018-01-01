@@ -11,7 +11,7 @@ import org.fejoa.support.*
 class PullRequest(private val requestRepo: Repository, private val commitSignature: CommitSignature?) {
 
     /**
-     * returns the remote tip
+     * @returns the remote tip
      */
     suspend fun pull(remotePipe: RemotePipe, branch: String, mergeStrategy: MergeStrategy): Hash? {
         val remoteTipMessage = LogEntryRequest.getRemoteTip(remotePipe, branch)?.message ?: return null

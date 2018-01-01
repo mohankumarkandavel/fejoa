@@ -6,6 +6,7 @@ import org.fejoa.repository.Repository
 import org.fejoa.repository.sync.PushRequest
 import org.fejoa.repository.sync.Request
 import org.fejoa.repository.sync.Request.BRANCH_REQUEST_METHOD
+import org.fejoa.storage.Hash
 
 
 @Serializable
@@ -13,7 +14,7 @@ class StorageRPCParams(val user: String, val branch: String)
 
 class PushJob(val repository: Repository, val user: String, val branch: String) : RemoteJob<PushJob.Result>() {
 
-    class Result(code: ReturnType, message: String, val result: Request.ResultType)
+    class Result(code: ReturnType, message: String, val result: Request.ResultType, val head: Hash)
         : RemoteJob.Result(code, message)
 
     private fun getHeader(): String {
@@ -22,11 +23,11 @@ class PushJob(val repository: Repository, val user: String, val branch: String) 
     }
 
     override suspend fun run(remoteRequest: RemoteRequest): Result {
-
+        val head = repository.getHead()
         val pushRequest = PushRequest(repository)
         val pipe = RemotePipeImpl(getHeader(), remoteRequest, null)
         val result = pushRequest.push(pipe, repository.getCurrentTransaction(), branch)
 
-        return Result(ReturnType.OK, "ok", result)
+        return Result(ReturnType.OK, "ok", result, head)
     }
 }

@@ -36,6 +36,10 @@ class StorageDir : IOStorageDir {
         storageDirCache.commitSignature = commitSignature
     }
 
+    fun getCommitSignature(): CommitSignature? {
+        return storageDirCache.commitSignature
+    }
+
     interface IListener {
         fun onTipChanged(diff: DatabaseDiff)
     }
